@@ -1,24 +1,73 @@
-import { useState, useEffect } from 'react'
-import { LogOut, User, Camera } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { LogOut, User, Camera, Pencil, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { AvatarUploadModal } from './AvatarUploadModal'
-
+import { useToast } from '../contexts/ToastContext'
 
 export function Header() {
-  const { user, signOut, avatarUrl } = useAuth()
+  const { user, signOut, avatarUrl, displayName, updateDisplayName } = useAuth()
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const [showAvatarModal, setShowAvatarModal] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  // Reset error when avatar URL changes (e.g. after upload)
+  // Inline name editing state
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Reset error when avatar URL changes
   useEffect(() => {
     setImageError(false)
   }, [avatarUrl])
 
+  // Sync nameValue when displayName changes externally
+  useEffect(() => {
+    if (!editingName) {
+      setNameValue(displayName || '')
+    }
+  }, [displayName, editingName])
+
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  const startEditingName = () => {
+    setNameValue(displayName || '')
+    setEditingName(true)
+    // Focus input on next tick
+    setTimeout(() => nameInputRef.current?.focus(), 50)
+  }
+
+  const cancelEditingName = () => {
+    setEditingName(false)
+    setNameValue(displayName || '')
+  }
+
+  const saveName = async () => {
+    const trimmed = nameValue.trim()
+    if (!trimmed || trimmed === displayName) {
+      setEditingName(false)
+      return
+    }
+    setSavingName(true)
+    try {
+      await updateDisplayName(trimmed)
+      showToast('İsim güncellendi', 'success', 2000)
+      setEditingName(false)
+    } catch {
+      showToast('İsim güncellenemedi', 'error', 3000)
+    } finally {
+      setSavingName(false)
+    }
+  }
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') saveName()
+    if (e.key === 'Escape') cancelEditingName()
   }
 
   return (
@@ -41,9 +90,49 @@ export function Header() {
             <div className="flex items-center gap-4 sm:gap-6">
               {user && (
                 <div className="flex items-center gap-4">
-                  <div className="hidden md:flex flex-col items-end">
-                    <span className="text-sm font-medium text-text-primary">{user.user_metadata?.full_name || 'Kullanıcı'}</span>
-                    <span className="text-xs text-text-tertiary truncate max-w-[150px]">{user.email}</span>
+                  {/* Display Name + Email — desktop only */}
+                  <div className="hidden md:flex flex-col items-end gap-0.5">
+                    {editingName ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          ref={nameInputRef}
+                          type="text"
+                          value={nameValue}
+                          onChange={(e) => setNameValue(e.target.value)}
+                          onKeyDown={handleNameKeyDown}
+                          disabled={savingName}
+                          className="text-sm font-medium text-text-primary bg-background-secondary border border-primary/40 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary w-36"
+                          maxLength={40}
+                        />
+                        <button
+                          onClick={saveName}
+                          disabled={savingName}
+                          className="text-primary hover:text-primary-light transition-colors"
+                          title="Kaydet"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={cancelEditingName}
+                          disabled={savingName}
+                          className="text-text-tertiary hover:text-text-primary transition-colors"
+                          title="İptal"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={startEditingName}
+                        className="group flex items-center gap-1 text-sm font-medium text-text-primary hover:text-white transition-colors"
+                        title="İsmi düzenle"
+                      >
+                        <span>{displayName || 'Kullanıcı'}</span>
+                        <Pencil className="w-3 h-3 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    )}
+                    {/* Email — no truncation, full display */}
+                    <span className="text-xs text-text-tertiary">{user.email}</span>
                   </div>
 
                   {/* Avatar */}
@@ -57,7 +146,7 @@ export function Header() {
                       {avatarUrl && !imageError ? (
                         <img
                           src={avatarUrl}
-                          alt="Profile"
+                          alt="Profil"
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           onError={() => setImageError(true)}
                         />
@@ -108,4 +197,3 @@ export function Header() {
     </>
   )
 }
-
