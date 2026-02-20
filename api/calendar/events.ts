@@ -2,119 +2,112 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { google } from 'googleapis'
 import { createClient } from '@supabase/supabase-js'
 
+// ── Supabase client factory ──────────────────────────────────
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+// ── Google OAuth client with token refresh ───────────────────
+async function getAuthenticatedCalendar(supabase: ReturnType<typeof getSupabase>, userId: string) {
+  if (!supabase) return null
+
+  const { data: tokens, error: tokenError } = await supabase
+    .from('google_calendar_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (tokenError || !tokens) return null
+
+  let accessToken = tokens.access_token
+  const now = Date.now()
+
+  // Proactively refresh if token expires within 5 minutes
+  if (tokens.expiry_date - now < 5 * 60 * 1000) {
+    try {
+      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          refresh_token: tokens.refresh_token,
+          grant_type: 'refresh_token',
+        }),
+      })
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json()
+        accessToken = refreshData.access_token
+        await supabase
+          .from('google_calendar_tokens')
+          .update({
+            access_token: refreshData.access_token,
+            expiry_date: Date.now() + (refreshData.expires_in * 1000),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+      }
+    } catch (err) {
+      console.warn('[events] Token refresh failed, proceeding with existing token:', err)
+    }
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  )
+  oauth2Client.setCredentials({ access_token: accessToken })
+
+  return google.calendar({ version: 'v3', auth: oauth2Client })
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end()
 
-  // Get user ID from Authorization header or session
   const authHeader = req.headers.authorization
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Unauthorized' })
+  if (!authHeader) return res.status(401).json({ error: 'Unauthorized' })
+
+  const userId = (req.query.user_id as string) || null
+  if (!userId) return res.status(401).json({ error: 'User ID required' })
+
+  const supabase = getSupabase()
+  if (!supabase) {
+    console.error('[events] Missing Supabase environment variables')
+    return res.status(500).json({ error: 'Supabase configuration missing' })
   }
 
-  // Extract user ID from token (simplified - in production, verify JWT)
-  // TODO: Properly verify Supabase JWT token
-  let userId: string | null = null
-  try {
-    // For now, we'll need to get user_id from the request
-    // In production, verify the JWT token from Supabase
-    userId = req.query.user_id as string || null
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid authentication' })
-  }
-
+  // ── GET: Fetch events ────────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      // Fetch events from Google Calendar
       const { timeMin, timeMax, calendarIds } = req.query
 
       if (!timeMin || !timeMax) {
         return res.status(400).json({ error: 'timeMin and timeMax are required' })
       }
 
-      // Parse calendar IDs (comma-separated)
+      const calendar = await getAuthenticatedCalendar(supabase, userId)
+      if (!calendar) {
+        return res.status(401).json({ error: 'Google Calendar not connected. Please reconnect.' })
+      }
+
       const requestedCalendarIds = calendarIds
         ? (calendarIds as string).split(',').filter(Boolean)
         : []
-
-      // Get user's tokens from Supabase
-      if (!userId) {
-        return res.status(401).json({ error: 'User ID required' })
-      }
-
-      // Initialize Supabase client
-      // In Vercel, use SUPABASE_URL (not VITE_SUPABASE_URL which is client-side only)
-      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables in events GET endpoint')
-        return res.status(500).json({ error: 'Supabase configuration missing' })
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      })
-
-      const { data: tokens, error: tokenError } = await supabase
-        .from('google_calendar_tokens')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (tokenError || !tokens) {
-        return res.status(401).json({ error: 'Google Calendar not connected' })
-      }
-
-      // Refresh token if needed
-      const now = Date.now()
-      let accessToken = tokens.access_token
-
-      if (tokens.expiry_date - now < 5 * 60 * 1000) {
-        // Token expires soon, refresh it
-        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: tokens.refresh_token,
-            grant_type: 'refresh_token',
-          }),
-        })
-
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json()
-          accessToken = refreshData.access_token
-
-          // Update stored token
-          await supabase
-            .from('google_calendar_tokens')
-            .update({
-              access_token: refreshData.access_token,
-              expiry_date: Date.now() + (refreshData.expires_in * 1000),
-            })
-            .eq('user_id', userId)
-        }
-      }
-
-      // Initialize Google Calendar API
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET
-      )
-      oauth2Client.setCredentials({ access_token: accessToken })
-
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
 
       // Get user's calendars from database
       const { data: userCalendars } = await supabase
@@ -122,17 +115,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select('*')
         .eq('user_id', userId)
 
-      // Determine which calendars to fetch from
       let calendarsToFetch: Array<{ id: string; googleId: string; color: string; name: string }> = []
 
       if (userCalendars && userCalendars.length > 0) {
-        // Filter by requested calendar IDs, or use all if none specified
-        const calendars = requestedCalendarIds.length > 0
+        const filtered = requestedCalendarIds.length > 0
           ? userCalendars.filter(c => requestedCalendarIds.includes(c.id))
           : userCalendars
 
-        calendarsToFetch = calendars
-          .filter(c => c.google_calendar_id) // Only calendars with Google Calendar IDs
+        calendarsToFetch = filtered
+          .filter(c => c.google_calendar_id)
           .map(c => ({
             id: c.id,
             googleId: c.google_calendar_id!,
@@ -141,27 +132,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }))
       }
 
-      // If no calendars found, fall back to primary calendar
       if (calendarsToFetch.length === 0) {
-        calendarsToFetch = [{
-          id: 'primary',
-          googleId: 'primary',
-          color: '#3b82f6',
-          name: 'Primary',
-        }]
+        calendarsToFetch = [{ id: 'primary', googleId: 'primary', color: '#10b981', name: 'Primary' }]
       }
 
-      // Fetch events from all calendars
       const allEvents: Array<{
-        id: string
-        summary: string
-        description?: string
-        start: string
-        end: string
-        colorId?: string
-        location?: string
-        calendarId: string
-        color?: string
+        id: string; summary: string; description?: string
+        start: string; end: string; allDay: boolean
+        colorId?: string; location?: string; calendarId: string; color?: string
       }> = []
 
       for (const cal of calendarsToFetch) {
@@ -175,134 +153,142 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             orderBy: 'startTime',
           })
 
-          const calendarEvents = (response.data.items || [])
-            .filter((item): item is NonNullable<typeof item> => item?.id != null)
-            .map((item) => {
-              const start = item.start?.dateTime || item.start?.date || ''
-              const end = item.end?.dateTime || item.end?.date || ''
-
-              return {
-                id: item.id!,
-                summary: item.summary || 'Untitled Event',
-                description: item.description || undefined,
-                start,
-                end,
-                colorId: item.colorId || undefined,
-                location: item.location || undefined,
-                calendarId: cal.id,
-                color: cal.color,
-              }
+          const items = response.data.items || []
+          for (const item of items) {
+            if (!item?.id) continue
+            const isAllDay = !item.start?.dateTime
+            const start = item.start?.dateTime || item.start?.date || ''
+            const end = item.end?.dateTime || item.end?.date || ''
+            allEvents.push({
+              id: item.id,
+              summary: item.summary || 'Untitled Event',
+              description: item.description || undefined,
+              start,
+              end,
+              allDay: isAllDay,
+              colorId: item.colorId || undefined,
+              location: item.location || undefined,
+              calendarId: cal.id,
+              color: cal.color,
             })
-
-          allEvents.push(...calendarEvents)
+          }
         } catch (err) {
-          console.error(`Error fetching events from calendar ${cal.name}:`, err)
-          // Continue with other calendars even if one fails
+          console.error(`[events GET] Error fetching calendar ${cal.name}:`, err)
         }
       }
 
-      // Sort all events by start time
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-
       return res.status(200).json({ events: allEvents })
-    } catch (err) {
-      console.error('Error fetching events:', err)
+
+    } catch (err: any) {
+      console.error('[events GET] Error:', err?.message)
       return res.status(500).json({ error: 'Failed to fetch events' })
     }
   }
 
+  // ── POST: Create event ───────────────────────────────────────
   if (req.method === 'POST') {
     try {
-      // Create new event in Google Calendar
-      const { summary, description, start, end, colorId, location } = req.body
+      const {
+        summary, title,
+        description,
+        start, end,
+        startDate, endDate,
+        startDateTime, endDateTime,
+        allDay,
+        colorId,
+        location,
+        calendarId: requestedCalendarId,
+        timeZone,
+      } = req.body
 
-      if (!summary || !start || !end) {
-        return res.status(400).json({ error: 'summary, start, and end are required' })
+      const eventTitle = (summary || title || '').trim()
+      if (!eventTitle) {
+        return res.status(400).json({ error: 'Event title (summary) is required' })
       }
 
-      if (!userId) {
-        return res.status(401).json({ error: 'User ID required' })
+      const calendar = await getAuthenticatedCalendar(supabase, userId)
+      if (!calendar) {
+        return res.status(401).json({ error: 'Google Calendar not connected. Please reconnect.' })
       }
 
-      // Initialize Supabase client
-      // In Vercel, use SUPABASE_URL (not VITE_SUPABASE_URL which is client-side only)
-      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('Missing Supabase environment variables in events POST endpoint')
-        return res.status(500).json({ error: 'Supabase configuration missing' })
+      // Determine target Google calendar ID
+      let googleCalendarId = 'primary'
+      if (requestedCalendarId && requestedCalendarId !== 'primary') {
+        const { data: calRecord } = await supabase
+          .from('calendars')
+          .select('google_calendar_id')
+          .eq('id', requestedCalendarId)
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (calRecord?.google_calendar_id) {
+          googleCalendarId = calRecord.google_calendar_id
+        }
       }
 
-      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      })
+      const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
-      // Get user's tokens
-      const { data: tokens, error: tokenError } = await supabase
-        .from('google_calendar_tokens')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
+      // Build start/end for Google Calendar API (allDay uses date, timed uses dateTime)
+      let googleStart: { date?: string; dateTime?: string; timeZone?: string }
+      let googleEnd: { date?: string; dateTime?: string; timeZone?: string }
 
-      if (tokenError || !tokens) {
-        return res.status(401).json({ error: 'Google Calendar not connected' })
+      const isAllDay = allDay === true || (typeof start === 'string' && start.length === 10)
+
+      if (isAllDay) {
+        const sDate = startDate || (typeof start === 'string' ? start.slice(0, 10) : null)
+        const eDate = endDate || (typeof end === 'string' ? end.slice(0, 10) : sDate)
+        if (!sDate) return res.status(400).json({ error: 'startDate is required for all-day events' })
+        googleStart = { date: sDate }
+        googleEnd = { date: eDate || sDate }
+      } else {
+        const sDt = startDateTime || start
+        const eDt = endDateTime || end
+        if (!sDt || !eDt) return res.status(400).json({ error: 'start and end dateTime are required' })
+        googleStart = { dateTime: new Date(sDt).toISOString(), timeZone: tz }
+        googleEnd = { dateTime: new Date(eDt).toISOString(), timeZone: tz }
       }
 
-      // Initialize Google Calendar API
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET
-      )
-      oauth2Client.setCredentials({ access_token: tokens.access_token })
-
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
-
-      // Create event
-      const event = {
-        summary,
-        description: description || '',
-        start: {
-          dateTime: start,
-          timeZone: 'UTC',
-        },
-        end: {
-          dateTime: end,
-          timeZone: 'UTC',
-        },
-        colorId: colorId ? String(colorId) : undefined,
+      const eventResource = {
+        summary: eventTitle,
+        description: description || undefined,
         location: location || undefined,
+        start: googleStart,
+        end: googleEnd,
+        colorId: colorId ? String(colorId) : undefined,
       }
 
       const response = await calendar.events.insert({
-        calendarId: 'primary',
-        requestBody: event,
+        calendarId: googleCalendarId,
+        requestBody: eventResource,
       })
 
-      const eventData = response.data
-      const eventStart = eventData.start?.dateTime || eventData.start?.date || ''
-      const eventEnd = eventData.end?.dateTime || eventData.end?.date || ''
+      const ev = response.data
+      const evIsAllDay = !ev.start?.dateTime
 
-      const newEvent = {
-        id: eventData.id || '',
-        summary: eventData.summary || 'Untitled Event',
-        description: eventData.description || undefined,
-        start: eventStart,
-        end: eventEnd,
-        colorId: eventData.colorId || undefined,
-        location: eventData.location || undefined,
-      }
+      return res.status(200).json({
+        id: ev.id || '',
+        summary: ev.summary || 'Untitled Event',
+        description: ev.description || undefined,
+        start: ev.start?.dateTime || ev.start?.date || '',
+        end: ev.end?.dateTime || ev.end?.date || '',
+        allDay: evIsAllDay,
+        colorId: ev.colorId || undefined,
+        location: ev.location || undefined,
+        calendarId: requestedCalendarId || 'primary',
+      })
 
-      return res.status(200).json(newEvent)
-    } catch (err) {
-      console.error('Error creating event:', err)
-      return res.status(500).json({ error: 'Failed to create event' })
+    } catch (err: any) {
+      console.error('[events POST] Error creating event:', {
+        message: err?.message,
+        code: err?.code,
+        status: err?.status,
+      })
+      return res.status(500).json({
+        error: 'Failed to create event',
+        detail: err?.message,
+      })
     }
   }
 
   return res.status(405).json({ error: 'Method not allowed' })
 }
-

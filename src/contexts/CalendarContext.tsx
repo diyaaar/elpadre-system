@@ -12,6 +12,7 @@ export interface CalendarEvent {
   description?: string
   start: string
   end: string
+  allDay?: boolean
   color?: string
   colorId?: string
   location?: string
@@ -163,7 +164,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           if (saved) {
             const savedIds = JSON.parse(saved)
             // Only use saved IDs that still exist in calendars
-            const validIds = savedIds.filter((id: string) => data.some(c => c.id === id))
+            const validIds = savedIds.filter((id: string) => data.some((c: { id: string }) => c.id === id))
             if (validIds.length > 0) {
               setSelectedCalendarIds(validIds)
               return
@@ -173,7 +174,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           console.warn('Failed to load calendar selection from localStorage:', err)
         }
         // Default: select all calendars
-        const allIds = data.map(c => c.id)
+        const allIds = data.map((c: { id: string }) => c.id)
         setSelectedCalendarIds(allIds)
         localStorage.setItem(SELECTED_CALENDARS_STORAGE_KEY, JSON.stringify(allIds))
       }
@@ -442,25 +443,42 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) return null
 
     try {
+      const supabase = (await import('../lib/supabase')).getSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
       const response = await fetch('/api/calendar/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ ...event, user_id: user.id }),
+        body: JSON.stringify({
+          ...event,
+          user_id: user.id,
+          // Forward all Google Calendar fields explicitly
+          summary: event.summary,
+          allDay: event.allDay,
+          calendarId: event.calendarId,
+          colorId: event.colorId,
+          location: event.location,
+          description: event.description,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create event')
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData?.error || 'Failed to create event')
       }
 
       const newEvent = await response.json()
+      // Invalidate cache so next fetch gets fresh events
+      eventsCacheRef.current.clear()
       setEvents((prev) => [...prev, newEvent])
       showToast('Event created successfully', 'success', 2000)
       return newEvent
     } catch (err) {
       console.error('Error creating event:', err)
-      showToast('Failed to create event', 'error', 3000)
+      showToast(err instanceof Error ? err.message : 'Failed to create event', 'error', 3000)
       return null
     }
   }, [isAuthenticated, user, showToast])
