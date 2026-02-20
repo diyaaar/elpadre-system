@@ -141,8 +141,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (endDate) endField = { date: endDate }
       } else {
         const tz = body.timeZone || 'Europe/Istanbul'
-        if (body.start) startField = { dateTime: body.start, timeZone: tz }
-        if (body.end) endField = { dateTime: body.end, timeZone: tz }
+        // Strip any trailing Z or +HH:MM offset so Google interprets the time
+        // as a wall-clock time in the given timeZone, not as UTC.
+        const stripOffset = (dt: string) => dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19)
+        if (body.start) startField = { dateTime: stripOffset(body.start), timeZone: tz }
+        if (body.end) endField = { dateTime: stripOffset(body.end), timeZone: tz }
       }
 
       const patchBody: any = {}

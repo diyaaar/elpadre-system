@@ -236,7 +236,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      // Always default to Europe/Istanbul for this app; never fall back to server-side UTC
+      const tz = timeZone || 'Europe/Istanbul'
 
       // Build start/end for Google Calendar API (allDay uses date, timed uses dateTime)
       let googleStart: { date?: string; dateTime?: string; timeZone?: string }
@@ -254,8 +255,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const sDt = startDateTime || start
         const eDt = endDateTime || end
         if (!sDt || !eDt) return res.status(400).json({ error: 'start and end dateTime are required' })
-        googleStart = { dateTime: new Date(sDt).toISOString(), timeZone: tz }
-        googleEnd = { dateTime: new Date(eDt).toISOString(), timeZone: tz }
+
+        // IMPORTANT: Do NOT use new Date(...).toISOString() here.
+        // toISOString() always converts to UTC and appends 'Z', which causes Google
+        // Calendar to ignore the timeZone field, resulting in a +3h offset for Istanbul.
+        // Instead, strip any trailing 'Z' or offset suffix and send the local datetime
+        // string as-is, paired with an explicit IANA timeZone.
+        const stripOffset = (dt: string) => {
+          // Remove trailing Z (UTC marker) or +HH:MM / -HH:MM offset so the string
+          // is treated as a "wall clock" time in the given timeZone.
+          return dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19)
+        }
+        googleStart = { dateTime: stripOffset(sDt), timeZone: tz }
+        googleEnd = { dateTime: stripOffset(eDt), timeZone: tz }
       }
 
       const eventResource = {
