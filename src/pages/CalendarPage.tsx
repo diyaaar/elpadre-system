@@ -214,7 +214,7 @@ export function CalendarPage() {
       {/* Sidebar */}
       <CalendarSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-      <div className="flex-1 flex flex-col space-y-4 min-w-0">
+      <div className="flex-1 flex flex-col space-y-8 min-w-0">
         {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
