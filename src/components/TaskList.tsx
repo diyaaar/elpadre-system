@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import { TaskWithSubtasks } from '../types/task'
@@ -53,36 +53,27 @@ export const TaskList = memo(function TaskList() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (!over || active.id === over.id) {
-      return
-    }
+    if (!over || active.id === over.id) return
 
-    // Find the tasks being moved
-    const allTasks = filteredAndSortedTasks
-    const activeTask = findTaskById(allTasks, active.id as string)
-    const overTask = findTaskById(allTasks, over.id as string)
+    const rootTasks = filteredAndSortedTasks
+    const oldIndex = rootTasks.findIndex(t => t.id === active.id)
+    const newIndex = rootTasks.findIndex(t => t.id === over.id)
 
-    if (!activeTask || !overTask) return
+    if (oldIndex === -1 || newIndex === -1) return
 
-    // Update positions
-    // For simplicity, we'll update the position based on the over task's position
-    // In a more sophisticated implementation, you'd recalculate all positions
-    const newPosition = (overTask.position ?? 0) + 1
+    // Reorder the array
+    const reordered = arrayMove(rootTasks, oldIndex, newIndex)
 
-    await updateTask(active.id as string, {
-      position: newPosition,
-    })
-  }
+    // Persist new positions for every task whose index changed
+    const updates: Array<{ id: string; position: number }> = reordered
+      .map((task: TaskWithSubtasks, index: number) => ({ id: task.id, position: index }))
+      .filter((item: { id: string; position: number }, index: number) => rootTasks[index]?.id !== item.id)
 
-  const findTaskById = (tasks: TaskWithSubtasks[], id: string): TaskWithSubtasks | null => {
-    for (const task of tasks) {
-      if (task.id === id) return task
-      if (task.subtasks) {
-        const found = findTaskById(task.subtasks, id)
-        if (found) return found
-      }
-    }
-    return null
+    await Promise.all(
+      updates.map(({ id, position }: { id: string; position: number }) =>
+        updateTask(id, { position }, true /* suppressToast */)
+      )
+    )
   }
 
   if (filteredAndSortedTasks.length === 0) {
@@ -93,7 +84,6 @@ export const TaskList = memo(function TaskList() {
     )
   }
 
-  // Flatten tasks for drag and drop (only root level tasks are sortable)
   const rootTaskIds = filteredAndSortedTasks.map((task) => task.id)
 
   return (
@@ -112,4 +102,3 @@ export const TaskList = memo(function TaskList() {
     </DndContext>
   )
 })
-

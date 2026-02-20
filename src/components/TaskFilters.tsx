@@ -1,17 +1,15 @@
 import { useState } from 'react'
-import { SlidersHorizontal, ArrowUpDown, X, Search } from 'lucide-react'
+import { SlidersHorizontal, X, Search } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TagInput, TagOption } from './TagInput'
 import { useTags } from '../contexts/TagsContext'
-import { TaskSort, TaskFilter } from '../types/task'
+import { TaskFilter } from '../types/task'
 
 export function TaskFilters() {
   const {
     filter: filterStatus,
     setFilter: setFilterStatus,
-    sort: sortBy,
-    setSort: setSortBy,
     searchQuery,
     setSearchQuery,
     selectedTagIds,
@@ -24,14 +22,12 @@ export function TaskFilters() {
   // Map tag IDs to Tag objects for TagInput compatibility
   const selectedTagObjects: TagOption[] = selectedTagIds.map(tagId => {
     const existing = tags.find(t => t.id === tagId)
-    // Fallback if tag not found in available tags (should rare)
     return existing ? { ...existing, id: existing.id, name: existing.name, color: existing.color } : { id: tagId, name: 'Unknown', color: '#666' }
   })
 
   // Clear all filters handler
   const clearFilters = () => {
     setFilterStatus('all')
-    setSortBy('created')
     setSearchQuery('')
     setSelectedTagIds([])
   }
@@ -100,26 +96,6 @@ export function TaskFilters() {
               <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
             )}
           </button>
-
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as TaskSort)}
-              className="appearance-none pl-9 pr-8 py-2.5 bg-background-elevated/50 border border-white/5 rounded-xl text-sm text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:bg-background-tertiary transition-colors min-w-[160px]"
-            >
-              <option value="created">Önce En Yeni</option>
-              <option value="deadline">Tarihi En Yakın</option>
-              <option value="priority">En Yüksek Öncelik</option>
-              <option value="alphabetical">A-Z</option>
-            </select>
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <ArrowUpDown className="w-4 h-4 text-text-tertiary opacity-70" />
-            </div>
-            {/* Custom arrow for select */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none border-l border-white/10 pl-2">
-              <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-text-tertiary" />
-            </div>
-          </div>
         </div>
       </div>
 

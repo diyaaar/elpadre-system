@@ -34,11 +34,11 @@ export function Header() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">
-                  AI Todo
-                  <span className="text-primary-light ml-1">List</span>
+                  El Padre
+                  <span className="text-primary-light ml-1">✦</span>
                 </h1>
                 <p className="text-[10px] text-text-tertiary font-medium tracking-wider uppercase hidden sm:block">
-                  Smart Task Management
+                  Akıllı Görev Yönetimi
                 </p>
               </div>
             </div>
@@ -47,7 +47,7 @@ export function Header() {
               {user && (
                 <div className="flex items-center gap-4">
                   <div className="hidden md:flex flex-col items-end">
-                    <span className="text-sm font-medium text-text-primary">{user.user_metadata?.full_name || 'User'}</span>
+                    <span className="text-sm font-medium text-text-primary">{user.user_metadata?.full_name || 'Kullanıcı'}</span>
                     <span className="text-xs text-text-tertiary truncate max-w-[150px]">{user.email}</span>
                   </div>
 
@@ -56,8 +56,8 @@ export function Header() {
                     <button
                       onClick={() => setShowAvatarModal(true)}
                       className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-primary/50 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background shadow-lg shadow-black/20 bg-background-elevated"
-                      title="Change profile picture"
-                      aria-label="Change profile picture"
+                      title="Profil fotoğrafını değiştir"
+                      aria-label="Profil fotoğrafını değiştir"
                     >
                       {avatarUrl && !imageError ? (
                         <img
@@ -87,10 +87,10 @@ export function Header() {
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-text-secondary hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-200 border border-white/5 hover:border-white/10"
-                    title="Sign out"
+                    title="Çıkış yap"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span className="hidden sm:inline">Sign Out</span>
+                    <span className="hidden sm:inline">Çıkış</span>
                   </button>
                 </div>
               )}
