@@ -82,7 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authHeader = req.headers.authorization
   if (!authHeader) return res.status(401).json({ error: 'Unauthorized' })
 
-  const userId = (req.query.user_id as string) || null
+  // user_id can come from query string (GET) or request body (POST)
+  const userId = (req.query.user_id as string) || (req.body?.user_id as string) || null
   if (!userId) return res.status(401).json({ error: 'User ID required' })
 
   const supabase = getSupabase()
