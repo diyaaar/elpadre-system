@@ -2,6 +2,74 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { google } from 'googleapis'
 import { createClient } from '@supabase/supabase-js'
 
+// ── Supabase client factory ──────────────────────────────────
+function getSupabase() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) return null
+
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+// ── Google OAuth client with token refresh ───────────────────
+// This matches the logic in api/calendar/events.ts to ensure consistent auth
+async function getAuthenticatedCalendar(supabase: any, userId: string) {
+  if (!supabase) return null
+
+  const { data: tokens, error: tokenError } = await supabase
+    .from('google_calendar_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (tokenError || !tokens) return null
+
+  let accessToken = tokens.access_token
+  const now = Date.now()
+
+  // Proactively refresh if token expires within 5 minutes
+  if (tokens.expiry_date - now < 5 * 60 * 1000) {
+    try {
+      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          refresh_token: tokens.refresh_token,
+          grant_type: 'refresh_token',
+        }),
+      })
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json()
+        accessToken = refreshData.access_token
+        await supabase
+          .from('google_calendar_tokens')
+          .update({
+            access_token: refreshData.access_token,
+            expiry_date: Date.now() + (refreshData.expires_in * 1000),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+      }
+    } catch (err) {
+      console.warn('[events/[id]] Token refresh failed, proceeding with existing token:', err)
+    }
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  )
+  oauth2Client.setCredentials({ access_token: accessToken })
+
+  return google.calendar({ version: 'v3', auth: oauth2Client })
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -27,43 +95,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'User ID required' })
   }
 
-  // Initialize Supabase client
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !supabaseServiceKey) {
+  const supabase = getSupabase()
+  if (!supabase) {
     return res.status(500).json({ error: 'Supabase configuration missing' })
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
-  const { data: tokens, error: tokenError } = await supabase
-    .from('google_calendar_tokens')
-    .select('*')
-    .eq('user_id', userId)
-    .single()
-
-  if (tokenError || !tokens) {
-    return res.status(401).json({ error: 'Google Calendar not connected' })
+  // Get authenticated calendar (this handles token refresh if needed)
+  const calendar = await getAuthenticatedCalendar(supabase, userId)
+  if (!calendar) {
+    return res.status(401).json({ error: 'Google Calendar not connected or token expired' })
   }
 
-  // Always use the freshest bearer token from the request header
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : tokens.access_token
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  )
-  oauth2Client.setCredentials({ access_token: bearerToken })
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
-
-  // ── PATCH: Update event using events.patch() (only sends changed fields) ──
+  // ── PATCH: Update event using events.patch() ─────────────────
   if (req.method === 'PATCH') {
     try {
       const body = req.body
-      const calendarId = (req.query.calendarId as string) || body?.calendarId || 'primary'
 
-      console.log(`[PATCH] event=${id} calendar=${calendarId}`)
+      // Determine target Google calendar ID
+      let googleCalendarId = 'primary'
+      const requestedCalendarId = (req.query.calendarId as string) || body?.calendarId
+
+      if (requestedCalendarId && requestedCalendarId !== 'primary') {
+        const { data: calRecord } = await supabase
+          .from('calendars')
+          .select('google_calendar_id')
+          .eq('id', requestedCalendarId)
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (calRecord?.google_calendar_id) {
+          googleCalendarId = calRecord.google_calendar_id
+        }
+      }
+
+      console.log(`[PATCH] event=${id} calendar=${googleCalendarId}`)
 
       // Build start/end according to allDay flag
       type DateField = { date: string } | { dateTime: string; timeZone: string }
@@ -71,20 +135,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let endField: DateField | undefined
 
       if (body.allDay) {
-        // All-day event: use "date" field (YYYY-MM-DD), no timeZone
         const startDate = typeof body.start === 'string' ? body.start.slice(0, 10) : undefined
         const endDate = typeof body.end === 'string' ? body.end.slice(0, 10) : undefined
         if (startDate) startField = { date: startDate }
         if (endDate) endField = { date: endDate }
       } else {
-        // Timed event: use "dateTime" with explicit timeZone
         const tz = body.timeZone || 'Europe/Istanbul'
         if (body.start) startField = { dateTime: body.start, timeZone: tz }
         if (body.end) endField = { dateTime: body.end, timeZone: tz }
       }
 
-      // Use patch() — only sends the fields we provide, no ETag conflicts
-      const patchBody: Record<string, unknown> = {}
+      const patchBody: any = {}
       if (body.summary !== undefined) patchBody.summary = body.summary
       if (body.description !== undefined) patchBody.description = body.description || null
       if (body.location !== undefined) patchBody.location = body.location || null
@@ -93,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (endField) patchBody.end = endField
 
       const response = await calendar.events.patch({
-        calendarId,
+        calendarId: googleCalendarId,
         eventId: id,
         requestBody: patchBody,
       })
@@ -107,36 +168,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         end: ev.end?.dateTime || ev.end?.date || '',
         colorId: ev.colorId || undefined,
         location: ev.location || undefined,
-        calendarId,
+        calendarId: requestedCalendarId || 'primary',
         allDay: !!ev.start?.date,
       })
     } catch (err) {
       console.error('Error updating event:', err)
-      const detail = err instanceof Error ? err.message : String(err)
-      return res.status(500).json({ error: 'Failed to update event', detail })
+      return res.status(500).json({ error: 'Failed to update event', detail: (err as any)?.message })
     }
   }
 
-  // ── DELETE: Remove event, handle "already deleted" gracefully ──
+  // ── DELETE: Remove event ─────────────────────────────────────
   if (req.method === 'DELETE') {
     try {
-      const calendarId = (req.query.calendarId as string) || 'primary'
+      let googleCalendarId = 'primary'
+      const requestedCalendarId = (req.query.calendarId as string)
 
-      console.log(`[DELETE] event=${id} calendar=${calendarId}`)
+      if (requestedCalendarId && requestedCalendarId !== 'primary') {
+        const { data: calRecord } = await supabase
+          .from('calendars')
+          .select('google_calendar_id')
+          .eq('id', requestedCalendarId)
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (calRecord?.google_calendar_id) {
+          googleCalendarId = calRecord.google_calendar_id
+        }
+      }
 
-      await calendar.events.delete({ calendarId, eventId: id })
+      console.log(`[DELETE] event=${id} calendar=${googleCalendarId}`)
 
-      // 204 No Content is the correct success response for DELETE
+      await calendar.events.delete({ calendarId: googleCalendarId, eventId: id })
       return res.status(204).end()
-    } catch (err: unknown) {
-      const status = (err as { code?: number })?.code
-      // 404 / 410 = already deleted — treat as success
-      if (status === 404 || status === 410) {
+    } catch (err: any) {
+      if (err.code === 404 || err.code === 410) {
         return res.status(204).end()
       }
       console.error('Error deleting event:', err)
-      const detail = err instanceof Error ? err.message : String(err)
-      return res.status(500).json({ error: 'Failed to delete event', detail })
+      return res.status(500).json({ error: 'Failed to delete event', detail: err?.message })
     }
   }
 
