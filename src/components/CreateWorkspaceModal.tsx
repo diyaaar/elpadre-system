@@ -1,3 +1,4 @@
+import { Portal } from '../components/Portal'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Smile } from 'lucide-react'
@@ -84,14 +85,11 @@ export function CreateWorkspaceModal({
           onClick={onClose}
         />
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-background-secondary border border-background-tertiary rounded-t-2xl sm:rounded-lg shadow-xl max-w-md w-full z-10"
+          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          className="bg-background-secondary border border-background-tertiary rounded-2xl shadow-xl max-w-md w-full z-10 -translate-y-12 sm:-translate-y-16"
           onClick={(e) => e.stopPropagation()}
-          style={{
-            marginTop: 'auto', // Push to bottom on mobile
-          }}
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -139,32 +137,34 @@ export function CreateWorkspaceModal({
                   </button>
                   <AnimatePresence>
                     {showEmojiPicker && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-50"
-                          onClick={() => setShowEmojiPicker(false)}
-                        />
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute z-50 mt-2 left-0 sm:left-auto"
-                        >
-                          <div className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl overflow-hidden">
-                            <EmojiPicker
-                              onEmojiClick={(emojiData: EmojiClickData) => {
-                                setSelectedIcon(emojiData.emoji)
-                                setShowEmojiPicker(false)
-                              }}
-                              width={350}
-                              height={400}
-                              searchDisabled={false}
-                              skinTonesDisabled={true}
-                            />
-                          </div>
-                        </motion.div>
-                      </>
+                      <Portal>
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                          <div
+                            className="absolute inset-0"
+                            onClick={() => setShowEmojiPicker(false)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            transition={{ duration: 0.15 }}
+                            className="relative z-[101] -translate-y-12 sm:-translate-y-16"
+                          >
+                            <div className="bg-background-secondary border border-background-tertiary rounded-xl shadow-2xl overflow-hidden">
+                              <EmojiPicker
+                                onEmojiClick={(emojiData: EmojiClickData) => {
+                                  setSelectedIcon(emojiData.emoji)
+                                  setShowEmojiPicker(false)
+                                }}
+                                width={350}
+                                height={400}
+                                searchDisabled={false}
+                                skinTonesDisabled={true}
+                              />
+                            </div>
+                          </motion.div>
+                        </div>
+                      </Portal>
                     )}
                   </AnimatePresence>
                 </div>

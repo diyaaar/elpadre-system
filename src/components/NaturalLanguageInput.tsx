@@ -122,10 +122,10 @@ export function NaturalLanguageInput() {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-sm font-medium"
+        className="flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-xs sm:text-sm font-medium whitespace-nowrap w-full h-full"
       >
-        <Sparkles className="w-4 h-4 text-primary" />
-        <span>AI'ya Sor</span>
+        <Sparkles className="w-4 h-4 text-primary shrink-0" />
+        <span>AI ile Görev Oluştur</span>
       </button>
 
       {/* Modal Overlay */}

@@ -142,29 +142,28 @@ export function HomePage() {
                       />
                     )}
                   </h2>
-                  <p className="text-text-tertiary mt-1 text-sm">
-                    {filteredAndSortedTasks.length === 0
-                      ? 'Aktif görev yok'
-                      : `${filteredAndSortedTasks.length} bekleyen göreviniz var`}
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowPhotoRecognition(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-sm font-medium"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Tara</span>
-                  </button>
+                <div className="flex items-stretch gap-2 w-full sm:w-auto">
+                  {/* Left Column: Secondary Actions (Stacked on mobile) */}
+                  <div className="flex flex-col sm:flex-row gap-2 flex-auto sm:flex-none">
+                    <button
+                      onClick={() => setShowPhotoRecognition(true)}
+                      className="flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-xs sm:text-sm font-medium whitespace-nowrap w-full h-full"
+                    >
+                      <Camera className="w-4 h-4 shrink-0" />
+                      <span>El Yazısı Tara</span>
+                    </button>
 
-                  <NaturalLanguageInput />
+                    <NaturalLanguageInput />
+                  </div>
 
+                  {/* Right Column: Primary Action */}
                   <button
                     onClick={() => setShowNewTaskForm(!showNewTaskForm)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 text-sm font-medium"
+                    className="flex items-center justify-center sm:justify-start flex-1 sm:flex-none gap-1.5 px-3 sm:px-5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 text-sm font-medium whitespace-nowrap"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-5 h-5 shrink-0" />
                     <span>Yeni Görev</span>
                   </button>
                 </div>

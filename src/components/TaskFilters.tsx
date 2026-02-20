@@ -36,15 +36,15 @@ export function TaskFilters() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex gap-2 w-full">
         {/* Search Input */}
-        <div className="relative flex-1 group">
+        <div className="relative flex-1 group min-w-0">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-text-tertiary group-focus-within:text-primary transition-colors" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-10 py-2.5 bg-background-elevated/50 border border-white/5 rounded-xl text-sm placeholder:text-text-tertiary/50 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm text-text-primary"
+            className="block w-full pl-10 pr-10 py-2.5 bg-background-elevated/50 border border-white/5 rounded-xl text-sm placeholder:text-text-tertiary/50 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm text-text-primary h-full"
             placeholder="Görevlerde ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -59,44 +59,24 @@ export function TaskFilters() {
           )}
         </div>
 
-        {/* Filter Toggle (Mobile) & Desktop Controls */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-          {/* Mobile Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`
-              sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap
-              ${showFilters
-                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                : 'bg-background-elevated/50 text-text-secondary hover:text-text-primary hover:bg-background-tertiary border border-white/5'
-              }
-            `}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span>Filtreler</span>
-            {hasActiveFilters && (
-              <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
-            )}
-          </button>
-
-          {/* Desktop Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`
-              hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap
-              ${showFilters
-                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                : 'bg-background-elevated/50 text-text-secondary hover:text-text-primary hover:bg-background-tertiary border border-white/5'
-              }
-            `}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span>Filtreler</span>
-            {hasActiveFilters && (
-              <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
-            )}
-          </button>
-        </div>
+        {/* Filter Toggle */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`
+            shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+            ${showFilters
+              ? 'bg-primary text-white shadow-lg shadow-primary/20'
+              : 'bg-background-elevated/50 text-text-secondary hover:text-text-primary hover:bg-background-tertiary border border-white/5'
+            }
+          `}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span className="hidden sm:inline">Filtreler</span>
+          <span className="sm:hidden">Filtre</span>
+          {hasActiveFilters && (
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
+          )}
+        </button>
       </div>
 
       {/* Expanded Filters */}
