@@ -44,14 +44,14 @@ export function AvatarUploadModal({
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      showToast('File size exceeds 5MB limit', 'error', 3000)
+      showToast('Dosya boyutu 5MB sınırını aşıyor', 'error', 3000)
       return
     }
 
     // Validate MIME type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      showToast('Invalid file type. Allowed: JPEG, PNG, GIF, WebP', 'error', 3000)
+      showToast('Geçersiz dosya türü. İzin verilenler: JPEG, PNG, GIF, WebP', 'error', 3000)
       return
     }
 
@@ -66,19 +66,19 @@ export function AvatarUploadModal({
 
   const handleUrlSubmit = () => {
     if (!urlInput.trim()) {
-      showToast('Please enter a valid URL', 'error', 2000)
+      showToast('Lütfen geçerli bir URL girin', 'error', 2000)
       return
     }
 
     if (!isValidImageUrl(urlInput)) {
-      showToast('Invalid URL format', 'error', 2000)
+      showToast('Geçersiz URL formatı', 'error', 2000)
       return
     }
 
     setPreview(urlInput)
     setImageError(false)
     setUrlInput('')
-    showToast('Image URL set', 'success', 2000)
+    showToast('Resim URL\'si ayarlandı', 'success', 2000)
   }
 
   const handleUpload = async () => {
@@ -96,11 +96,11 @@ export function AvatarUploadModal({
 
         // Update user's avatar_url in database
         await updateAvatar(result.url)
-        showToast('Avatar uploaded successfully', 'success', 2000)
+        showToast('Avatar başarıyla yüklendi', 'success', 2000)
         onClose()
       } catch (err) {
         console.error('Upload error:', err)
-        showToast('Failed to upload avatar', 'error', 3000)
+        showToast('Avatar yüklenemedi', 'error', 3000)
       } finally {
         setUploading(false)
       }
@@ -109,11 +109,11 @@ export function AvatarUploadModal({
       setUploading(true)
       try {
         await updateAvatar(preview)
-        showToast('Avatar updated successfully', 'success', 2000)
+        showToast('Avatar başarıyla güncellendi', 'success', 2000)
         onClose()
       } catch (err) {
         console.error('Update error:', err)
-        showToast('Failed to update avatar', 'error', 3000)
+        showToast('Avatar güncellenemedi', 'error', 3000)
       } finally {
         setUploading(false)
       }
@@ -136,11 +136,11 @@ export function AvatarUploadModal({
 
       await updateAvatar(null)
       setPreview(null)
-      showToast('Avatar removed', 'success', 2000)
+      showToast('Avatar kaldırıldı', 'success', 2000)
       onClose()
     } catch (err) {
       console.error('Remove error:', err)
-      showToast('Failed to remove avatar', 'error', 3000)
+      showToast('Avatar kaldırılamadı', 'error', 3000)
     } finally {
       setUploading(false)
     }
@@ -167,11 +167,11 @@ export function AvatarUploadModal({
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-text-primary">Change Profile Picture</h2>
+              <h2 className="text-xl font-semibold text-text-primary">Profil Fotoğrafını Değiştir</h2>
               <button
                 onClick={onClose}
                 className="p-1 hover:bg-background-tertiary rounded transition-colors"
-                aria-label="Close"
+                aria-label="Kapat"
               >
                 <X className="w-5 h-5 text-text-tertiary" />
               </button>
@@ -183,7 +183,7 @@ export function AvatarUploadModal({
                 {preview && !imageError ? (
                   <img
                     src={preview}
-                    alt="Avatar preview"
+                    alt="Avatar önizleme"
                     className="w-full h-full object-cover"
                     onError={() => setImageError(true)}
                   />
@@ -211,7 +211,7 @@ export function AvatarUploadModal({
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-background-tertiary hover:bg-background-tertiary/80 rounded-lg cursor-pointer transition-colors"
                 >
                   <Upload className="w-4 h-4" />
-                  <span className="text-sm">Upload from device</span>
+                  <span className="text-sm">Cihazdan yükle</span>
                 </label>
               </div>
 
@@ -222,7 +222,7 @@ export function AvatarUploadModal({
                     type="text"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="Or paste image URL"
+                    placeholder="Veya resim URL'si yapıştırın"
                     className="flex-1 px-3 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -234,11 +234,11 @@ export function AvatarUploadModal({
                     onClick={handleUrlSubmit}
                     className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors text-sm"
                   >
-                    Use URL
+                    URL Kullan
                   </button>
                 </div>
                 <p className="text-xs text-text-tertiary mt-1">
-                  Max 5MB. Formats: JPEG, PNG, GIF, WebP
+                  Maks. 5MB. Formatlar: JPEG, PNG, GIF, WebP
                 </p>
               </div>
             </div>
@@ -252,7 +252,7 @@ export function AvatarUploadModal({
                   className="flex items-center gap-2 px-4 py-2 text-danger hover:bg-danger/10 rounded-lg transition-colors disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span className="text-sm">Remove</span>
+                  <span className="text-sm">Kaldır</span>
                 </button>
               )}
               <div className="flex items-center gap-2 ml-auto">
@@ -260,14 +260,14 @@ export function AvatarUploadModal({
                   onClick={onClose}
                   className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  Cancel
+                  İptal
                 </button>
                 <button
                   onClick={handleUpload}
                   disabled={!preview || uploading || (!selectedFile && preview === currentAvatarUrl)}
                   className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {uploading ? 'Uploading...' : 'Save'}
+                  {uploading ? 'Yükleniyor...' : 'Kaydet'}
                 </button>
               </div>
             </div>
