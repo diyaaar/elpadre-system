@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Plus, Loader2, Menu, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Calendar, dateFnsLocalizer, SlotInfo, View } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from 'date-fns'
-import enUS from 'date-fns/locale/en-US'
+import tr from 'date-fns/locale/tr'
 import { motion } from 'framer-motion'
 import { useCalendar, CalendarEvent } from '../contexts/CalendarContext'
 import { useToast } from '../contexts/ToastContext'
@@ -11,7 +11,7 @@ import { EventFormModal } from '../components/calendar/EventFormModal'
 import '../components/calendar/RBCTheme.css'
 
 // ── date-fns localizer for RBC ───────────────────────────────
-const locales = { 'en-US': enUS }
+const locales = { 'tr': tr }
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales })
 
 // ── Map CalendarEvent → RBC event ───────────────────────────
@@ -30,7 +30,7 @@ function toRBCEvent(ev: CalendarEvent): RBCEvent {
   const end = ev.end ? new Date(ev.end) : new Date(start.getTime() + 60 * 60 * 1000)
   return {
     id: ev.id,
-    title: ev.summary || 'Untitled',
+    title: ev.summary || 'Başlıksız',
     start,
     end,
     allDay: isAllDay,
@@ -41,9 +41,9 @@ function toRBCEvent(ev: CalendarEvent): RBCEvent {
 // ── View type guard ──────────────────────────────────────────
 type CalendarView = 'month' | 'week' | 'day'
 const VIEW_LABELS: Record<CalendarView, string> = {
-  month: 'Month',
-  week: 'Week',
-  day: 'Day',
+  month: 'Ay',
+  week: 'Hafta',
+  day: 'Gün',
 }
 
 export function CalendarPage() {
@@ -79,12 +79,12 @@ export function CalendarPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('calendar_connected') === 'true') {
-      showToast('Google Calendar connected!', 'success', 3000)
+      showToast('Google Takvim bağlandı!', 'success', 3000)
       window.history.replaceState({}, '', window.location.pathname)
       window.location.reload()
     } else if (params.get('calendar_error')) {
       const err = params.get('calendar_error')
-      showToast(`Failed to connect Google Calendar: ${err}`, 'error', 5000)
+      showToast(`Google Takvim bağlantısı başarısız oldu: ${err}`, 'error', 5000)
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [showToast])
@@ -167,12 +167,12 @@ export function CalendarPage() {
 
   // ── Header label ────────────────────────────────────────────
   const headerLabel = (() => {
-    if (view === 'month') return format(currentDate, 'MMMM yyyy')
+    if (view === 'month') return format(currentDate, 'MMMM yyyy', { locale: tr })
     if (view === 'week') {
       const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
-      return `Week of ${format(weekStart, 'MMM d, yyyy')}`
+      return `${format(weekStart, 'd MMMM', { locale: tr })} haftası`
     }
-    return format(currentDate, 'EEEE, MMMM d, yyyy')
+    return format(currentDate, 'd MMMM yyyy, EEEE', { locale: tr })
   })()
 
   // ── Unauthenticated state ───────────────────────────────────
@@ -189,9 +189,9 @@ export function CalendarPage() {
             <div className="w-20 h-20 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center mb-4">
               <Plus className="w-10 h-10 text-emerald-500" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Connect Google Calendar</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Google Takvim'i Bağla</h2>
             <p className="text-slate-400 mb-6">
-              Connect your Google Calendar to view and manage events alongside your tasks.
+              Görevlerinizle birlikte etkinliklerinizi görüntülemek ve yönetmek için Google Takvim'inizi bağlayın.
             </p>
           </motion.div>
           <motion.button
@@ -200,7 +200,7 @@ export function CalendarPage() {
             onClick={connectGoogleCalendar}
             className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl transition-all duration-200 font-semibold shadow-lg shadow-emerald-500/20"
           >
-            Connect Google Calendar
+            Google Takvim'i Bağla
           </motion.button>
         </div>
       </div>
@@ -226,7 +226,7 @@ export function CalendarPage() {
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white flex-shrink-0"
-              aria-label="Toggle calendar list"
+              aria-label="Takvim listesini göster/gizle"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -235,7 +235,7 @@ export function CalendarPage() {
                 {headerLabel}
               </h2>
               <p className="text-xs text-slate-500">
-                {events.length} event{events.length !== 1 ? 's' : ''}
+                {events.length} etkinlik
               </p>
             </div>
           </div>
@@ -264,7 +264,7 @@ export function CalendarPage() {
               <button
                 onClick={() => navigate('prev')}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white"
-                aria-label="Previous"
+                aria-label="Geri"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -272,12 +272,12 @@ export function CalendarPage() {
                 onClick={() => navigate('today')}
                 className="px-3 py-1.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg transition-colors shadow shadow-emerald-500/20"
               >
-                Today
+                Bugün
               </button>
               <button
                 onClick={() => navigate('next')}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white"
-                aria-label="Next"
+                aria-label="İleri"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -291,7 +291,7 @@ export function CalendarPage() {
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold rounded-lg transition-colors shadow shadow-emerald-500/20"
             >
               <Plus className="w-4 h-4" />
-              New event
+              Yeni etkinlik
             </motion.button>
           </div>
         </motion.div>
@@ -322,11 +322,13 @@ export function CalendarPage() {
               popup
               eventPropGetter={eventStyleGetter}
               style={{ height: view === 'month' ? 680 : 720 }}
-              culture="en-US"
+              culture="tr"
               startAccessor="start"
               endAccessor="end"
               titleAccessor="title"
               views={['month', 'week', 'day']}
+              step={60}
+              timeslots={1}
               // Disable RBC's own toolbar (we use our own)
               toolbar={false}
             />

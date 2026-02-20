@@ -130,11 +130,11 @@ export function EventFormModal({
 
     const handleSave = useCallback(async () => {
         if (!title.trim()) {
-            setError('Title is required')
+            setError('Başlık zorunludur')
             return
         }
         if (!startStr || !endStr) {
-            setError('Start and end date/time are required')
+            setError('Başlangıç ve bitiş tarihi/saati zorunludur')
             return
         }
 
@@ -174,7 +174,7 @@ export function EventFormModal({
 
             onClose()
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save event')
+            setError(err instanceof Error ? err.message : 'Etkinlik kaydedilemedi')
         } finally {
             setSaving(false)
         }
@@ -187,7 +187,7 @@ export function EventFormModal({
             await deleteEvent(event.id)
             onClose()
         } catch {
-            setError('Failed to delete event')
+            setError('Etkinlik silinemedi')
         } finally {
             setDeleting(false)
         }
@@ -210,12 +210,12 @@ export function EventFormModal({
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ type: 'spring', damping: 28, stiffness: 350 }}
                         className="w-full max-w-lg bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
                             <h2 className="text-lg font-semibold text-white">
-                                {isEditing ? 'Edit Event' : 'New Event'}
+                                {isEditing ? 'Etkinliği Düzenle' : 'Yeni Etkinlik'}
                             </h2>
                             <button
                                 onClick={onClose}
@@ -240,7 +240,7 @@ export function EventFormModal({
                             <input
                                 autoFocus
                                 type="text"
-                                placeholder="Event title"
+                                placeholder="Etkinlik başlığı"
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
@@ -262,7 +262,7 @@ export function EventFormModal({
                                             }`}
                                     />
                                 </button>
-                                <span className="text-sm text-slate-400">All day</span>
+                                <span className="text-sm text-slate-400">Tüm gün</span>
                             </div>
 
                             {/* Date/Time */}
@@ -270,7 +270,7 @@ export function EventFormModal({
                                 <div className="space-y-1">
                                     <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide">
                                         <Clock className="w-3 h-3" />
-                                        {allDay ? 'Start date' : 'Start'}
+                                        {allDay ? 'Başlangıç tarihi' : 'Başlangıç'}
                                     </label>
                                     <input
                                         type={allDay ? 'date' : 'datetime-local'}
@@ -282,7 +282,7 @@ export function EventFormModal({
                                 <div className="space-y-1">
                                     <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide">
                                         <Clock className="w-3 h-3" />
-                                        {allDay ? 'End date' : 'End'}
+                                        {allDay ? 'Bitiş tarihi' : 'Bitiş'}
                                     </label>
                                     <input
                                         type={allDay ? 'date' : 'datetime-local'}
@@ -298,7 +298,7 @@ export function EventFormModal({
                                 <div className="space-y-1">
                                     <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide">
                                         <Calendar className="w-3 h-3" />
-                                        Calendar
+                                        Takvim
                                     </label>
                                     <select
                                         value={calendarId}
@@ -317,7 +317,7 @@ export function EventFormModal({
                             {/* Color picker */}
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                                    Color
+                                    Renk
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                     {/* Default: use calendar color */}
@@ -326,8 +326,8 @@ export function EventFormModal({
                                         onClick={() => setColorId('')}
                                         className={`w-6 h-6 rounded-full border-2 transition-all ${colorId === '' ? 'border-white scale-110' : 'border-transparent hover:border-white/40'
                                             } bg-emerald-500`}
-                                        title="Default (calendar color)"
-                                        aria-label="Default color"
+                                        title="Varsayılan (takvim rengi)"
+                                        aria-label="Varsayılan renk"
                                     />
                                     {GOOGLE_COLORS.map(c => (
                                         <button
@@ -349,7 +349,7 @@ export function EventFormModal({
                                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                                 <input
                                     type="text"
-                                    placeholder="Add location"
+                                    placeholder="Konum ekle"
                                     value={location}
                                     onChange={e => setLocation(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-9 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60 transition-all"
@@ -360,7 +360,7 @@ export function EventFormModal({
                             <div className="relative">
                                 <AlignLeft className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                                 <textarea
-                                    placeholder="Add description"
+                                    placeholder="Açıklama ekle"
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
                                     rows={3}
@@ -380,7 +380,7 @@ export function EventFormModal({
                                     className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
                                 >
                                     {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                    Delete
+                                    Sil
                                 </button>
                             ) : <div />}
 
@@ -390,7 +390,7 @@ export function EventFormModal({
                                     onClick={onClose}
                                     className="px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                                 >
-                                    Cancel
+                                    İptal
                                 </button>
                                 <button
                                     type="button"
@@ -399,7 +399,7 @@ export function EventFormModal({
                                     className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                    {isEditing ? 'Save changes' : 'Create event'}
+                                    {isEditing ? 'Değişiklikleri kaydet' : 'Etkinlik oluştur'}
                                 </button>
                             </div>
                         </div>

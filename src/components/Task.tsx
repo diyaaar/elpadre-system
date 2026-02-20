@@ -160,10 +160,10 @@ export function Task({ task, depth = 0 }: TaskProps) {
       await removeTagFromTask(task.id, tagId)
       // Optimistically update UI
       setTaskTags((prevTags) => prevTags.filter((tag) => tag.id !== tagId))
-      showToast('Tag removed successfully', 'success', 2000)
+      showToast('Etiket başarıyla kaldırıldı', 'success', 2000)
     } catch (err) {
       console.error('Error removing tag:', err)
-      showToast('Failed to remove tag', 'error', 3000)
+      showToast('Etiket kaldırılamadı', 'error', 3000)
       // Refresh tags on error to restore correct state
       getTaskTags(task.id).then(setTaskTags)
     }
@@ -175,10 +175,10 @@ export function Task({ task, depth = 0 }: TaskProps) {
         background_image_url: imageUrl,
         background_image_display_mode: displayMode,
       })
-      showToast('Background image updated', 'success', 2000)
+      showToast('Arka plan resmi güncellendi', 'success', 2000)
     } catch (err) {
       console.error('Error updating background image:', err)
-      showToast('Failed to update background image', 'error', 3000)
+      showToast('Arka plan resmi güncellenemedi', 'error', 3000)
     }
   }
 
@@ -186,16 +186,16 @@ export function Task({ task, depth = 0 }: TaskProps) {
     try {
       if (editingLink) {
         await updateTaskLink(editingLink.id, { url, display_name: displayName || null })
-        showToast('Link updated', 'success', 2000)
+        showToast('Bağlantı güncellendi', 'success', 2000)
         setEditingLink(null)
       } else {
         await addTaskLink(task.id, url, displayName)
-        showToast('Link added', 'success', 2000)
+        showToast('Bağlantı eklendi', 'success', 2000)
       }
       getTaskLinks(task.id).then(setTaskLinks)
     } catch (err) {
       console.error('Error saving link:', err)
-      showToast('Failed to save link', 'error', 3000)
+      showToast('Bağlantı kaydedilemedi', 'error', 3000)
     }
   }
 
@@ -203,10 +203,10 @@ export function Task({ task, depth = 0 }: TaskProps) {
     try {
       await deleteTaskLink(linkId)
       setTaskLinks((prev) => prev.filter((link) => link.id !== linkId))
-      showToast('Link deleted', 'success', 2000)
+      showToast('Bağlantı silindi', 'success', 2000)
     } catch (err) {
       console.error('Error deleting link:', err)
-      showToast('Failed to delete link', 'error', 3000)
+      showToast('Bağlantı silinemedi', 'error', 3000)
     }
   }
 
@@ -216,7 +216,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
       getTaskImages(task.id).then(setTaskImages)
     } catch (err) {
       console.error('Error adding image:', err)
-      showToast('Failed to add image', 'error', 3000)
+      showToast('Resim eklenemedi', 'error', 3000)
     }
   }
 
@@ -224,10 +224,10 @@ export function Task({ task, depth = 0 }: TaskProps) {
     try {
       await deleteTaskImage(imageId)
       setTaskImages((prev) => prev.filter((img) => img.id !== imageId))
-      showToast('Image deleted', 'success', 2000)
+      showToast('Resim silindi', 'success', 2000)
     } catch (err) {
       console.error('Error deleting image:', err)
-      showToast('Failed to delete image', 'error', 3000)
+      showToast('Resim silinemedi', 'error', 3000)
     }
   }
 
@@ -290,11 +290,11 @@ export function Task({ task, depth = 0 }: TaskProps) {
         }
 
         if (workspace?.color) {
-            taskColor = workspace.color
-            const id = getColorIdFromHex(workspace.color)
-            if (id !== null) {
-                colorId = id.toString()
-            }
+          taskColor = workspace.color
+          const id = getColorIdFromHex(workspace.color)
+          if (id !== null) {
+            colorId = id.toString()
+          }
         }
       }
 
@@ -309,13 +309,13 @@ export function Task({ task, depth = 0 }: TaskProps) {
       })
 
       if (!event) {
-          throw new Error('Failed to create event. Make sure Google Calendar is connected.')
+        throw new Error('Etkinlik oluşturulamadı. Google Takvim\'in bağlı olduğundan emin olun.')
       }
 
-      showToast('Added to calendar ✓', 'success', 2000)
+      showToast('Takvime eklendi ✓', 'success', 2000)
     } catch (err) {
       console.error('Error adding task to calendar:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add to calendar. Please try again.'
+      const errorMessage = err instanceof Error ? err.message : 'Takvime eklenemedi. Lütfen tekrar deneyin.'
       showToast(errorMessage, 'error', 4000)
     } finally {
       setIsAddingToCalendar(false)
@@ -415,7 +415,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
               {task.priority && (
                 <span className={`px-2 py-0.5 rounded-md text-xs font-medium border flex items-center gap-1 ${getPriorityStyles()}`}>
                   <Flag className="w-3 h-3" />
-                  {task.priority}
+                  {task.priority === 'high' ? 'Yüksek' : task.priority === 'medium' ? 'Orta' : 'Düşük'}
                 </span>
               )}
 
@@ -514,7 +514,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
           ${isHovered || showActions ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}
         `}>
           <div className="flex items-center gap-1 bg-background-elevated/90 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-lg">
-            <button onClick={() => setShowAISuggestions(true)} className="p-1.5 hover:bg-primary/20 text-text-tertiary hover:text-primary rounded-md transition-colors" title="AI Suggestions"><Sparkles className="w-4 h-4" /></button>
+            <button onClick={() => setShowAISuggestions(true)} className="p-1.5 hover:bg-primary/20 text-text-tertiary hover:text-primary rounded-md transition-colors" title="AI Önerileri"><Sparkles className="w-4 h-4" /></button>
             <button onClick={handleAddToCalendar} disabled={isAddingToCalendar} className="p-1.5 hover:bg-primary/20 text-text-tertiary hover:text-primary rounded-md transition-colors">
               {isAddingToCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
             </button>
@@ -579,7 +579,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
       {user && showBackgroundModal && <BackgroundImageUpload currentImageUrl={task.background_image_url} displayMode={task.background_image_display_mode || 'thumbnail'} onSave={handleSaveBackgroundImage} userId={user.id} taskId={task.id} onClose={() => setShowBackgroundModal(false)} />}
       <LinkAttachmentModal isOpen={showLinkModal} onClose={() => { setShowLinkModal(false); setEditingLink(null) }} onSave={handleAddLink} link={editingLink} />
       {user && showImageModal && <ImageAttachmentModal isOpen={showImageModal} onClose={() => setShowImageModal(false)} onSave={handleAddImage} userId={user.id} taskId={task.id} />}
-      <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={async () => { setShowDeleteConfirm(false); await deleteTask(task.id) }} title="Delete Task" message="Are you sure? This will delete all subtasks." confirmButtonColor="danger" />
+      <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={async () => { setShowDeleteConfirm(false); await deleteTask(task.id) }} title="Görevi Sil" message="Emin misiniz? Bu işlem tüm alt görevleri de silecektir." confirmButtonColor="danger" />
       <MoveTaskModal isOpen={showMoveModal} onClose={() => setShowMoveModal(false)} task={task} />
 
       {/* Fullscreen Image */}

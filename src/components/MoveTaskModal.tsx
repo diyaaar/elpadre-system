@@ -32,19 +32,19 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
     }
 
     const destinationWorkspace = workspaces.find((w) => w.id === selectedWorkspaceId)
-    const destinationName = destinationWorkspace?.name || 'workspace'
+    const destinationName = destinationWorkspace?.name || 'çalışma alanı'
 
     setMoving(true)
     try {
       // Update task with workspace change - this will optimistically remove it from current workspace
       await updateTask(task.id, { workspace_id: selectedWorkspaceId }, true) // suppressToast = true
-      
+
       // Show success toast with workspace name
-      showToast(`Task moved to ${destinationName}`, 'success', 2500)
+      showToast(`Görev ${destinationName} alanına taşındı`, 'success', 2500)
       onClose()
     } catch (err) {
       console.error('Error moving task:', err)
-      showToast('Failed to move task', 'error', 3000)
+      showToast('Görev taşınamadı', 'error', 3000)
     } finally {
       setMoving(false)
     }
@@ -71,7 +71,7 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-text-primary">Move Task</h2>
+              <h2 className="text-xl font-semibold text-text-primary">Görevi Taşı</h2>
               <button
                 onClick={onClose}
                 className="p-1 hover:bg-background-tertiary rounded transition-colors"
@@ -82,7 +82,7 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
             </div>
 
             <p className="text-sm text-text-secondary mb-4">
-              Move "{task.title}" to:
+              "{task.title}" görevini şuraya taşı:
             </p>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -95,10 +95,9 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
                     onClick={() => setSelectedWorkspaceId(workspace.id)}
                     className={`
                       w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all
-                      ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-background-tertiary hover:border-primary/50'
+                      ${isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-background-tertiary hover:border-primary/50'
                       }
                     `}
                   >
@@ -110,7 +109,7 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
                       {workspace.name}
                     </span>
                     {isCurrent && (
-                      <span className="text-xs text-text-tertiary">(current)</span>
+                      <span className="text-xs text-text-tertiary">(mevcut)</span>
                     )}
                     {isSelected && (
                       <Check className="w-5 h-5" style={{ color: workspace.color }} />
@@ -125,14 +124,14 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
                 onClick={onClose}
                 className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                İptal
               </button>
               <button
                 onClick={handleMove}
                 disabled={!selectedWorkspaceId || selectedWorkspaceId === task.workspace_id || moving}
                 className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50"
               >
-                {moving ? 'Moving...' : 'Move'}
+                {moving ? 'Taşınıyor...' : 'Taşı'}
               </button>
             </div>
           </div>

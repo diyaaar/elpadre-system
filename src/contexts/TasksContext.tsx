@@ -51,14 +51,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
   const [sort, setSort] = useState<TaskSort>('created')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  
+
   // Track pending updates to prevent duplicate realtime event handling
   const pendingUpdatesRef = useRef<Map<string, PendingUpdate>>(new Map())
-  
+
   // Track original completion states of subtasks when parent is completed
   // Structure: Map<parentTaskId, Map<subtaskId, { completed: boolean, completed_at: string | null }>>
   const originalSubtaskStatesRef = useRef<Map<string, Map<string, { completed: boolean; completed_at: string | null }>>>(new Map())
-  
+
   // Clean up old pending updates (older than 5 seconds)
   const cleanupPendingUpdates = useCallback(() => {
     const now = Date.now()
@@ -89,7 +89,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     try {
       setError(null)
-      
+
       // Always show loading state when fetching
       // This ensures users see feedback during workspace transitions
       setLoading(true)
@@ -100,9 +100,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', user.id)
         .eq('workspace_id', currentWorkspaceId) // CRITICAL: Always filter by workspace_id
-      
+
       console.log('[TasksContext] Fetching tasks for workspace:', currentWorkspaceId)
-      
+
       const { data, error: fetchError } = await query
         .order('position', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
@@ -113,19 +113,19 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('[TasksContext] Fetched tasks:', data?.length || 0, 'for workspace:', currentWorkspaceId)
-      
+
       // Normalize tasks: ensure archived field exists (default to false if null/undefined)
       const normalizedTasks = (data || []).map((task) => ({
         ...task,
         archived: task.archived ?? false, // Default to false if null/undefined
       }))
-      
+
       // Log archived tasks for debugging
       const archivedCount = normalizedTasks.filter((t) => t.archived === true).length
       if (archivedCount > 0) {
         console.log(`[TasksContext] Found ${archivedCount} archived task(s) in workspace ${currentWorkspaceId}`)
       }
-      
+
       // Update tasks immediately - AnimatePresence will handle smooth crossfade
       // Old tasks (from previous workspace) will fade out via exit animation
       // New tasks (for current workspace) will fade in via enter animation
@@ -135,7 +135,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       previousWorkspaceIdRef.current = currentWorkspaceId
     } catch (err) {
       console.error('Error fetching tasks:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch tasks')
+      setError(err instanceof Error ? err.message : 'Görevler getirilemedi')
       setLoading(false)
       // On error, clear tasks to show error state clearly
       setTasks([])
@@ -159,7 +159,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     const userId = user.id
     const workspaceId = currentWorkspaceId // Capture current workspace ID
     console.log('[Realtime] Setting up tasks subscription for user:', userId, 'workspace:', workspaceId)
-    
+
     // CRITICAL: Always fetch tasks when workspace changes
     // Use a small delay to ensure workspace is fully set
     const fetchTimeout = setTimeout(() => {
@@ -169,7 +169,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     const supabase = getSupabase()
     const channelName = `tasks-changes-${userId}-${workspaceId}`
-    
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -187,15 +187,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
             new: payload.new,
             old: payload.old,
           })
-          
+
           // Clean up old pending updates
           cleanupPendingUpdates()
-          
+
           // Check if this is our own update
           const taskId = (payload.new as any)?.id || (payload.old as any)?.id
           if (taskId && typeof taskId === 'string') {
             const pendingUpdate = pendingUpdatesRef.current.get(taskId)
-            
+
             if (pendingUpdate) {
               // This is our own update - we already updated the UI optimistically
               console.log('[Realtime] Ignoring our own update for task:', taskId)
@@ -206,14 +206,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
               return // Don't refetch - we already updated UI
             }
           }
-          
+
           // This is an update from another source (or our update wasn't tracked)
           // CRITICAL: Handle workspace_id changes - task moved between workspaces
           const oldWorkspaceId = (payload.old as any)?.workspace_id
           const newWorkspaceId = (payload.new as any)?.workspace_id
           const taskWorkspaceId = newWorkspaceId || oldWorkspaceId
           const isWorkspaceChange = oldWorkspaceId !== newWorkspaceId
-          
+
           if (currentWorkspaceId) {
             if (isWorkspaceChange) {
               // Task was moved between workspaces
@@ -300,10 +300,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
       try {
         const supabase = getSupabase()
-        
+
         // Build query for existing tasks - use is.null for null parent_task_id
         const parentTaskId = taskData.parent_task_id ?? null
-        
+
         // CRITICAL: Position query must also filter by workspace_id
         if (!currentWorkspaceId) {
           throw new Error('Cannot create task: No workspace selected')
@@ -314,13 +314,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           .select('position')
           .eq('user_id', user.id)
           .eq('workspace_id', currentWorkspaceId) // CRITICAL: Filter by workspace
-        
+
         if (parentTaskId === null || parentTaskId === undefined) {
           positionQuery = positionQuery.is('parent_task_id', null)
         } else {
           positionQuery = positionQuery.eq('parent_task_id', parentTaskId)
         }
-        
+
         const { data: existingTasks, error: positionError } = await positionQuery
           .order('position', { ascending: false })
           .limit(1)
@@ -330,8 +330,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           throw positionError
         }
 
-        const maxPosition = existingTasks && existingTasks.length > 0 
-          ? (existingTasks[0].position ?? 0) + 1 
+        const maxPosition = existingTasks && existingTasks.length > 0
+          ? (existingTasks[0].position ?? 0) + 1
           : 0
 
         // CRITICAL: Always set workspace_id to current workspace when creating task
@@ -409,7 +409,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         }
 
         // Replace optimistic task with real task
-        setTasks((prevTasks) => 
+        setTasks((prevTasks) =>
           prevTasks.map((t) => (t.id === tempId ? data : t))
         )
 
@@ -426,7 +426,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           pendingUpdatesRef.current.delete(data.id)
         }, 2000)
 
-        showToast('Task created successfully', 'success')
+        showToast('Görev başarıyla oluşturuldu', 'success')
         return data
       } catch (err) {
         // Rollback if not already done
@@ -435,7 +435,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           pendingUpdatesRef.current.delete(tempId)
         }
         console.error('Error creating task:', err)
-        const errorMessage = err instanceof Error ? err.message : 'Failed to create task'
+        const errorMessage = err instanceof Error ? err.message : 'Görev oluşturulamadı'
         setError(errorMessage)
         showToast(errorMessage, 'error')
         return null
@@ -456,7 +456,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
       const previousState = { ...currentTask }
       const updatedTask = { ...currentTask, ...updates, updated_at: new Date().toISOString() }
-      
+
       // CRITICAL: Check if workspace_id is being changed
       const isWorkspaceChange = updates.workspace_id !== undefined && updates.workspace_id !== currentTask.workspace_id
 
@@ -473,17 +473,17 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const getAllSubtasks = (parentId: string, allTasks: typeof tasks): string[] => {
         const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
         const allSubtasks: string[] = []
-        
+
         directSubtasks.forEach((subtask) => {
           allSubtasks.push(subtask.id)
           // Recursively get nested subtasks
           const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
           allSubtasks.push(...nestedSubtasks)
         })
-        
+
         return allSubtasks
       }
-      
+
       const allSubtasksIds = isWorkspaceChange ? getAllSubtasks(id, tasks) : []
 
       // Optimistic update: immediately update UI
@@ -491,11 +491,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         if (isWorkspaceChange) {
           // If moving to different workspace, remove parent task and all subtasks from current list immediately
           console.log('[Optimistic] Removing task from current workspace:', id, 'moving to:', updates.workspace_id)
-          
+
           const idsToRemove = [id, ...allSubtasksIds]
-          
+
           console.log(`[Optimistic] Removing ${idsToRemove.length} tasks (1 parent + ${allSubtasksIds.length} subtasks) from current workspace`)
-          
+
           return prevTasks.filter((task) => !idsToRemove.includes(task.id))
         } else {
           // Normal update: update task in place
@@ -514,35 +514,35 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
       try {
         const supabase = getSupabase()
-        
+
         // CRITICAL: If workspace is changing, also update all subtasks recursively
         if (isWorkspaceChange && updates.workspace_id && allSubtasksIds.length > 0) {
-            console.log(`[Workspace Move] Moving ${allSubtasksIds.length} subtasks with parent task ${id} to workspace ${updates.workspace_id}`)
-            
-            // Get new workspace color for subtasks
-            const newWorkspace = workspaces.find(w => w.id === updates.workspace_id)
-            const newWorkspaceColor = newWorkspace?.color || null
-            const newColorId = getColorIdFromHex(newWorkspaceColor)
-            
-            // Update all subtasks in database (including color_id)
-            const { error: subtasksUpdateError } = await supabase
-              .from('tasks')
-              .update({
-                workspace_id: updates.workspace_id,
-                color_id: newColorId, // Update color_id for subtasks too
-                updated_at: new Date().toISOString(),
-              })
-              .in('id', allSubtasksIds)
-            
-            if (subtasksUpdateError) {
-              console.error('[Workspace Move] Failed to update subtasks:', subtasksUpdateError)
-              // Don't throw here - we'll still try to update the parent task
-              // The error will be caught and handled below
-            } else {
-              console.log(`[Workspace Move] Successfully moved ${allSubtasksIds.length} subtasks with color_id: ${newColorId}`)
-            }
+          console.log(`[Workspace Move] Moving ${allSubtasksIds.length} subtasks with parent task ${id} to workspace ${updates.workspace_id}`)
+
+          // Get new workspace color for subtasks
+          const newWorkspace = workspaces.find(w => w.id === updates.workspace_id)
+          const newWorkspaceColor = newWorkspace?.color || null
+          const newColorId = getColorIdFromHex(newWorkspaceColor)
+
+          // Update all subtasks in database (including color_id)
+          const { error: subtasksUpdateError } = await supabase
+            .from('tasks')
+            .update({
+              workspace_id: updates.workspace_id,
+              color_id: newColorId, // Update color_id for subtasks too
+              updated_at: new Date().toISOString(),
+            })
+            .in('id', allSubtasksIds)
+
+          if (subtasksUpdateError) {
+            console.error('[Workspace Move] Failed to update subtasks:', subtasksUpdateError)
+            // Don't throw here - we'll still try to update the parent task
+            // The error will be caught and handled below
+          } else {
+            console.log(`[Workspace Move] Successfully moved ${allSubtasksIds.length} subtasks with color_id: ${newColorId}`)
+          }
         }
-        
+
         // Update the parent task
         const { error: updateError } = await supabase
           .from('tasks')
@@ -561,22 +561,22 @@ export function TasksProvider({ children }: { children: ReactNode }) {
               const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
                 const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
                 const allSubtasks: typeof tasks = [...directSubtasks]
-                
+
                 directSubtasks.forEach((subtask) => {
                   // Recursively get nested subtasks
                   const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
                   allSubtasks.push(...nestedSubtasks)
                 })
-                
+
                 return allSubtasks
               }
-              
+
               // Restore parent task and all subtasks
               const allSubtasks = getAllSubtasks(id, tasks)
               const tasksToRestore = [previousState, ...allSubtasks]
-              
+
               console.log(`[Optimistic] Rollback: Restoring ${tasksToRestore.length} tasks (1 parent + ${allSubtasks.length} subtasks)`)
-              
+
               // Remove any duplicates and restore
               const existingIds = new Set(prevTasks.map((t) => t.id))
               const newTasks = tasksToRestore.filter((t) => !existingIds.has(t.id))
@@ -602,7 +602,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           // Don't show generic update toast here
         } else if (updates.title || updates.description || updates.priority || updates.deadline) {
           if (!suppressToast) {
-            showToast('Task updated successfully', 'success', 2000)
+            showToast('Görev başarıyla güncellendi', 'success', 2000)
           }
         }
       } catch (err) {
@@ -614,22 +614,22 @@ export function TasksProvider({ children }: { children: ReactNode }) {
             const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
               const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
               const allSubtasks: typeof tasks = [...directSubtasks]
-              
+
               directSubtasks.forEach((subtask) => {
                 // Recursively get nested subtasks
                 const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
                 allSubtasks.push(...nestedSubtasks)
               })
-              
+
               return allSubtasks
             }
-            
+
             // Restore parent task and all subtasks
             const allSubtasks = getAllSubtasks(id, tasks)
             const tasksToRestore = [previousState, ...allSubtasks]
-            
+
             console.log(`[Optimistic] Rollback: Restoring ${tasksToRestore.length} tasks (1 parent + ${allSubtasks.length} subtasks)`)
-            
+
             // Remove any duplicates and restore
             const existingIds = new Set(prevTasks.map((t) => t.id))
             const newTasks = tasksToRestore.filter((t) => !existingIds.has(t.id))
@@ -640,7 +640,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         })
         pendingUpdatesRef.current.delete(id)
         console.error('Error updating task:', err)
-        const errorMessage = err instanceof Error ? err.message : 'Failed to update task'
+        const errorMessage = err instanceof Error ? err.message : 'Görev güncellenemedi'
         setError(errorMessage)
         if (!suppressToast) {
           showToast(errorMessage, 'error')
@@ -664,16 +664,16 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
       const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
       const allSubtasks: typeof tasks = [...directSubtasks]
-      
+
       directSubtasks.forEach((subtask) => {
         // Recursively get nested subtasks
         const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
         allSubtasks.push(...nestedSubtasks)
       })
-      
+
       return allSubtasks
     }
-    
+
     const allSubtasks = getAllSubtasks(id, tasks)
     const allTaskIdsToDelete = [id, ...allSubtasks.map((t) => t.id)]
 
@@ -691,14 +691,14 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     try {
       const supabase = getSupabase()
-      
+
       // Delete all subtasks first (to maintain referential integrity)
       if (allSubtasks.length > 0) {
         const { error: subtasksDeleteError } = await supabase
           .from('tasks')
           .delete()
           .in('id', allSubtasks.map((t) => t.id))
-        
+
         if (subtasksDeleteError) {
           // Rollback: restore task and all subtasks
           setTasks((prevTasks) => {
@@ -711,7 +711,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         }
         console.log(`[Task Deletion] Deleted ${allSubtasks.length} subtasks from database`)
       }
-      
+
       // Delete the parent task
       const { error: deleteError } = await supabase
         .from('tasks')
@@ -742,7 +742,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
       const subtaskCount = allSubtasks.length
       showToast(
-        `Task${subtaskCount > 0 ? ` and ${subtaskCount} subtask${subtaskCount !== 1 ? 's' : ''}` : ''} deleted successfully`,
+        `Görev${subtaskCount > 0 ? ` ve ${subtaskCount} alt görev` : ''} başarıyla silindi`,
         'success',
         2000
       )
@@ -754,7 +754,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       })
       pendingUpdatesRef.current.delete(id)
       console.error('Error deleting task:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete task'
+      const errorMessage = err instanceof Error ? err.message : 'Görev silinemedi'
       setError(errorMessage)
       showToast(errorMessage, 'error')
     }
@@ -776,13 +776,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const getAllSubtasks = (parentId: string, allTasks: typeof tasks): typeof tasks => {
         const directSubtasks = allTasks.filter((t) => t.parent_task_id === parentId)
         const allSubtasks: typeof tasks = [...directSubtasks]
-        
+
         directSubtasks.forEach((subtask) => {
           // Recursively get nested subtasks
           const nestedSubtasks = getAllSubtasks(subtask.id, allTasks)
           allSubtasks.push(...nestedSubtasks)
         })
-        
+
         return allSubtasks
       }
 
@@ -790,23 +790,23 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       // If uncompleting, restore original states
       if (newCompleted) {
         const allSubtasks = getAllSubtasks(id, tasks)
-        
+
         // Save original completion states before overriding
         if (allSubtasks.length > 0) {
           const originalStates = new Map<string, { completed: boolean; completed_at: string | null }>()
-          
+
           allSubtasks.forEach((subtask) => {
             originalStates.set(subtask.id, {
               completed: subtask.completed,
               completed_at: subtask.completed_at,
             })
           })
-          
+
           // Store original states for this parent task
           originalSubtaskStatesRef.current.set(id, originalStates)
           console.log(`[Task Completion] Saved original states for ${allSubtasks.length} subtasks of task ${id}`)
         }
-        
+
         // Mark all subtasks as completed in the database
         if (allSubtasks.length > 0) {
           try {
@@ -819,7 +819,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
                 updated_at: new Date().toISOString(),
               })
               .in('id', allSubtasks.map((t) => t.id))
-            
+
             if (updateError) {
               console.error('Error completing subtasks:', updateError)
               // Rollback: remove saved states if update failed
@@ -838,11 +838,11 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       } else {
         // Uncompleting: restore original states of all subtasks
         const originalStates = originalSubtaskStatesRef.current.get(id)
-        
+
         if (originalStates && originalStates.size > 0) {
           try {
             const supabase = getSupabase()
-            
+
             // Restore each subtask to its original state
             const restorePromises = Array.from(originalStates.entries()).map(async ([subtaskId, originalState]) => {
               const { error } = await supabase
@@ -853,15 +853,15 @@ export function TasksProvider({ children }: { children: ReactNode }) {
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', subtaskId)
-              
+
               if (error) {
                 console.error(`Error restoring subtask ${subtaskId}:`, error)
               }
             })
-            
+
             await Promise.all(restorePromises)
             console.log(`[Task Completion] Restored original states for ${originalStates.size} subtasks`)
-            
+
             // Clean up: remove saved states after restoration
             originalSubtaskStatesRef.current.delete(id)
           } catch (err) {
@@ -869,7 +869,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
             // Don't throw - parent task is already uncompleted
           }
         }
-        
+
         // Also uncomplete all parent tasks (existing behavior)
         let parentId = task.parent_task_id
         while (parentId) {

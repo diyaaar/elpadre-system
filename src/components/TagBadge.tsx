@@ -9,7 +9,7 @@ interface TagBadgeProps {
 
 export function TagBadge({ tag, onRemove, size = 'md' }: TagBadgeProps) {
   const sizeClasses = size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-xs px-2 py-0.5'
-  
+
   return (
     <span
       className={`
@@ -30,7 +30,7 @@ export function TagBadge({ tag, onRemove, size = 'md' }: TagBadgeProps) {
             onRemove()
           }}
           className="hover:opacity-70 transition-opacity"
-          title="Remove tag"
+          title="Etiketi kaldır"
         >
           <X className="w-3 h-3" />
         </button>

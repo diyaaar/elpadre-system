@@ -100,11 +100,11 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         }
       }
       onSave()
-      showToast(task ? 'Task updated' : 'Task created', 'success')
+      showToast(task ? 'Görev güncellendi' : 'Görev oluşturuldu', 'success')
     } catch (err) {
       console.error('Failed to save task:', err)
-      setError('Failed to save task. Please try again.')
-      showToast('Failed to save task', 'error')
+      setError('Görev kaydedilemedi. Lütfen tekrar deneyin.')
+      showToast('Görev kaydedilemedi', 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -151,7 +151,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={parentTaskId ? "New subtask title..." : "Task title..."}
+              placeholder={parentTaskId ? "Yeni alt görev başlığı..." : "Görev başlığı..."}
               className="w-full bg-transparent border-none p-0 text-lg font-medium placeholder:text-text-tertiary/50 focus:ring-0 text-text-primary"
             />
 
@@ -159,7 +159,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Description (optional)"
+              placeholder="Açıklama (isteğe bağlı)"
               rows={2}
               className="w-full bg-transparent border-none p-0 text-sm text-text-secondary placeholder:text-text-tertiary/50 focus:ring-0 resize-none font-normal"
             />
@@ -179,7 +179,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
                   p-1.5 rounded-md transition-all duration-200 border border-transparent
                   ${priority === p ? getPriorityColor(p) : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'}
                 `}
-                title={`Set priority to ${p}`}
+                title={`Önceliği ${p} olarak ayarla`}
               >
                 <Flag className={`w-4 h-4 ${priority === p ? 'fill-current' : ''}`} />
               </button>
@@ -195,7 +195,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               ${deadline ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/5 text-text-tertiary hover:text-text-secondary hover:bg-white/10'}
             `}>
               <Calendar className="w-3.5 h-3.5" />
-              <span>{deadline ? format(new Date(deadline), 'MMM d, HH:mm') : 'Due Date'}</span>
+              <span>{deadline ? format(new Date(deadline), 'd MMM, HH:mm') : 'Bitiş Tarihi'}</span>
               <input
                 type="datetime-local"
                 value={deadline}
@@ -219,7 +219,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
                 return null
               }
             }}
-            placeholder="Add tags..."
+            placeholder="Etiket ekle..."
             className="w-full"
           />
         </div>
@@ -236,7 +236,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
       {/* Footer Actions */}
       <div className="flex items-center justify-between px-4 py-3 bg-background-tertiary/30 border-t border-white/5">
         <div className="flex items-center gap-2 text-xs text-text-tertiary pl-7">
-          <span className="hidden sm:inline-block opacity-60">Press ⌘+Enter to save</span>
+          <span className="hidden sm:inline-block opacity-60">Kaydetmek için ⌘+Enter'a basın</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
             onClick={onCancel}
             className="px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-white/5 rounded-lg transition-colors"
           >
-            Cancel
+            İptal
           </button>
           <button
             onClick={() => handleSubmit()}
@@ -263,7 +263,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
             ) : (
               <Save className="w-3.5 h-3.5" />
             )}
-            {task ? 'Save Changes' : 'Add Task'}
+            {task ? 'Değişiklikleri Kaydet' : 'Görev Ekle'}
           </button>
         </div>
       </div>

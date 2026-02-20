@@ -53,7 +53,7 @@ export function AISuggestionsModal({
       setSelectedSuggestions(new Set(generated.map((_, index) => index)))
     } catch (err) {
       console.error('Error fetching suggestions:', err)
-      setError(err instanceof Error ? err.message : 'Failed to generate suggestions')
+      setError(err instanceof Error ? err.message : 'Öneriler oluşturulamadı')
       setShowInput(true) // Show input again on error
     } finally {
       setLoading(false)
@@ -89,7 +89,7 @@ export function AISuggestionsModal({
       onClose()
     } catch (err) {
       console.error('Error adding suggestions:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add suggestions')
+      setError(err instanceof Error ? err.message : 'Öneriler eklenemedi')
     } finally {
       setAdding(false)
     }
@@ -121,8 +121,8 @@ export function AISuggestionsModal({
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-text-primary">Create subtasks for: {task.title}</h2>
-                <p className="text-sm text-text-tertiary">AI will combine your ideas with smart suggestions</p>
+                <h2 className="text-xl font-bold text-text-primary">{task.title} için alt görev oluştur</h2>
+                <p className="text-sm text-text-tertiary">Yapay zeka fikirlerinizi akıllı önerilerle birleştirecek</p>
               </div>
             </div>
             <button
@@ -139,18 +139,18 @@ export function AISuggestionsModal({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Describe subtasks you want (optional)
+                    İstediğiniz alt görevleri tarif edin (isteğe bağlı)
                   </label>
                   <textarea
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Example: postları oluştur, müzik seç, resimleri bul"
+                    placeholder="Örn: postları oluştur, müzik seç, resimleri bul"
                     className="w-full px-4 py-3 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                     rows={4}
                     autoFocus
                   />
                   <p className="text-xs text-text-tertiary mt-2">
-                    Optional - leave empty for AI suggestions only. You can list multiple items separated by commas.
+                    İsteğe bağlı - sadece yapay zeka önerileri için boş bırakın. Virgülle ayrılmış birden fazla öğe listeleyebilirsiniz.
                   </p>
                 </div>
                 <div className="flex items-center justify-end gap-3">
@@ -158,14 +158,14 @@ export function AISuggestionsModal({
                     onClick={onClose}
                     className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
                   >
-                    Cancel
+                    İptal
                   </button>
                   <button
                     onClick={fetchSuggestions}
                     className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors flex items-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
-                    Generate Subtasks
+                    Alt Görev Oluştur
                   </button>
                 </div>
               </div>
@@ -174,7 +174,7 @@ export function AISuggestionsModal({
             {loading && (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <p className="text-text-secondary">Generating suggestions...</p>
+                <p className="text-text-secondary">Öneriler oluşturuluyor...</p>
               </div>
             )}
 
@@ -191,7 +191,7 @@ export function AISuggestionsModal({
                   }}
                   className="w-full px-4 py-2 bg-background-tertiary hover:bg-background-tertiary/80 text-text-primary rounded-lg transition-colors"
                 >
-                  Try Again
+                  Tekrar Dene
                 </button>
               </div>
             )}
@@ -200,13 +200,13 @@ export function AISuggestionsModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-text-secondary text-sm">
-                    Select the subtasks you'd like to add:
+                    Eklemek istediğiniz alt görevleri seçin:
                   </p>
                   <button
                     onClick={handleSelectAll}
                     className="text-sm text-primary hover:text-primary-light transition-colors"
                   >
-                    {selectedSuggestions.size === suggestions.length ? 'Deselect All' : 'Select All'}
+                    {selectedSuggestions.size === suggestions.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
                   </button>
                 </div>
 
@@ -218,10 +218,9 @@ export function AISuggestionsModal({
                     transition={{ delay: index * 0.05 }}
                     className={`
                       flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all
-                      ${
-                        selectedSuggestions.has(index)
-                          ? 'bg-primary/10 border-primary/30'
-                          : 'bg-background-tertiary border-background-tertiary hover:border-primary/20'
+                      ${selectedSuggestions.has(index)
+                        ? 'bg-primary/10 border-primary/30'
+                        : 'bg-background-tertiary border-background-tertiary hover:border-primary/20'
                       }
                     `}
                     onClick={() => toggleSuggestion(index)}
@@ -229,10 +228,9 @@ export function AISuggestionsModal({
                     <div
                       className={`
                         mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-                        ${
-                          selectedSuggestions.has(index)
-                            ? 'bg-primary border-primary'
-                            : 'border-text-tertiary'
+                        ${selectedSuggestions.has(index)
+                          ? 'bg-primary border-primary'
+                          : 'border-text-tertiary'
                         }
                       `}
                     >
@@ -248,7 +246,7 @@ export function AISuggestionsModal({
 
             {!loading && !error && suggestions.length === 0 && (
               <div className="text-center py-12 text-text-tertiary">
-                <p>No suggestions available. Try again later.</p>
+                <p>Öneri bulunamadı. Lütfen daha sonra tekrar deneyin.</p>
               </div>
             )}
           </div>
@@ -266,10 +264,10 @@ export function AISuggestionsModal({
                   className="text-sm text-primary hover:text-primary-dark transition-colors"
                   disabled={adding}
                 >
-                  ← Edit Input
+                  ← Girişi Düzenle
                 </button>
                 <p className="text-sm text-text-tertiary">
-                  {selectedSuggestions.size} of {suggestions.length} selected
+                  {suggestions.length} öneriden {selectedSuggestions.size} tanesi seçildi
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -278,7 +276,7 @@ export function AISuggestionsModal({
                   className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
                   disabled={adding}
                 >
-                  Cancel
+                  İptal
                 </button>
                 <button
                   onClick={handleAddSelected}
@@ -288,12 +286,12 @@ export function AISuggestionsModal({
                   {adding ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Adding...
+                      Ekleniyor...
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
-                      Add Selected ({selectedSuggestions.size})
+                      Seçilenleri Ekle ({selectedSuggestions.size})
                     </>
                   )}
                 </button>

@@ -88,7 +88,7 @@ export const TaskList = memo(function TaskList() {
   if (filteredAndSortedTasks.length === 0) {
     return (
       <div className="text-center py-12 text-text-tertiary">
-        <p>No tasks found. Create your first task to get started!</p>
+        <p>Görev bulunamadı. Başlamak için ilk görevinizi oluşturun!</p>
       </div>
     )
   }

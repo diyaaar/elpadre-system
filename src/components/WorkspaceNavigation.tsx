@@ -65,16 +65,16 @@ export function WorkspaceNavigation() {
 
     try {
       await deleteWorkspace(workspaceToDelete)
-      showToast('Workspace deleted', 'success', 2000)
+      showToast('Çalışma alanı silindi', 'success', 2000)
       setShowDeleteConfirm(false)
       setWorkspaceToDelete(null)
     } catch (err) {
       console.error('Error deleting workspace:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete workspace'
       if (errorMessage.includes('last workspace')) {
-        showToast('Cannot delete the last workspace', 'error', 3000)
+        showToast('Son çalışma alanı silinemez', 'error', 3000)
       } else {
-        showToast(errorMessage, 'error', 3000)
+        showToast('Çalışma alanı silinemedi', 'error', 3000)
       }
     }
   }
@@ -117,7 +117,7 @@ export function WorkspaceNavigation() {
               onClick={handlePrevious}
               disabled={!canGoPrevious}
               className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95 touch-manipulation"
-              aria-label="Previous workspace"
+              aria-label="Önceki çalışma alanı"
             >
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
@@ -177,7 +177,7 @@ export function WorkspaceNavigation() {
               onClick={handleNext}
               disabled={!canGoNext}
               className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105 active:scale-95 touch-manipulation"
-              aria-label="Next workspace"
+              aria-label="Sonraki çalışma alanı"
             >
               <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
@@ -189,7 +189,7 @@ export function WorkspaceNavigation() {
                 setShowCreateModal(true)
               }}
               className="flex-shrink-0 p-1.5 sm:p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-background-tertiary rounded-lg transition-all hover:scale-105 active:scale-95 touch-manipulation"
-              aria-label="Create new workspace"
+              aria-label="Yeni çalışma alanı oluştur"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-text-tertiary" />
             </button>
@@ -218,13 +218,13 @@ export function WorkspaceNavigation() {
               onClick={() => handleEdit(contextMenu.workspaceId)}
               className="w-full px-4 py-3 sm:py-2 text-left text-sm min-h-[44px] flex items-center text-text-secondary hover:bg-background-tertiary active:bg-background-tertiary/80 transition-colors touch-manipulation"
             >
-              Edit
+              Düzenle
             </button>
             <button
               onClick={() => handleDeleteClick(contextMenu.workspaceId)}
               className="w-full px-4 py-3 sm:py-2 text-left text-sm min-h-[44px] flex items-center text-danger hover:bg-background-tertiary active:bg-background-tertiary/80 transition-colors touch-manipulation"
             >
-              Delete
+              Sil
             </button>
           </motion.div>
         </>
@@ -248,14 +248,14 @@ export function WorkspaceNavigation() {
           setWorkspaceToDelete(null)
         }}
         onConfirm={handleDelete}
-        title="Delete Workspace"
+        title="Çalışma Alanını Sil"
         message={
           workspaceToDelete
-            ? `Are you sure you want to delete "${workspaces.find((w) => w.id === workspaceToDelete)?.name}"? All tasks in this workspace will be moved to another workspace.`
+            ? `"${workspaces.find((w) => w.id === workspaceToDelete)?.name}" isimli çalışma alanını silmek istediğinizden emin misiniz? Bu çalışma alanındaki tüm görevler başka bir çalışma alanına taşınacaktır.`
             : ''
         }
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmText="Sil"
+        cancelText="İptal"
         confirmButtonColor="danger"
       />
     </>

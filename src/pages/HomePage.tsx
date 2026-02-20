@@ -76,7 +76,7 @@ export function HomePage() {
                   />
                 )}
                 <List className="w-4 h-4 relative z-10" />
-                <span className="relative z-10">Tasks</span>
+                <span className="relative z-10">Görevler</span>
               </button>
 
               <button
@@ -94,7 +94,7 @@ export function HomePage() {
                   />
                 )}
                 <Calendar className="w-4 h-4 relative z-10" />
-                <span className="relative z-10">Calendar</span>
+                <span className="relative z-10">Takvim</span>
               </button>
             </div>
           </div>
@@ -115,7 +115,7 @@ export function HomePage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
                 <div>
                   <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
-                    {currentWorkspace?.name || 'All Tasks'}
+                    {currentWorkspace?.name || 'Tüm Görevler'}
                     {currentWorkspace && (
                       <span
                         className="w-2.5 h-2.5 rounded-full ring-2 ring-background ring-offset-2 ring-offset-current"
@@ -125,8 +125,8 @@ export function HomePage() {
                   </h2>
                   <p className="text-text-tertiary mt-1 text-sm">
                     {filteredAndSortedTasks.length === 0
-                      ? 'No active tasks'
-                      : `You have ${filteredAndSortedTasks.length} pending task${filteredAndSortedTasks.length !== 1 ? 's' : ''}`}
+                      ? 'Aktif görev yok'
+                      : `${filteredAndSortedTasks.length} bekleyen göreviniz var`}
                   </p>
                 </div>
 
@@ -136,7 +136,7 @@ export function HomePage() {
                     className="flex items-center gap-2 px-4 py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-sm font-medium"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>Scan</span>
+                    <span>Tara</span>
                   </button>
 
                   <NaturalLanguageInput />
@@ -146,7 +146,7 @@ export function HomePage() {
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 text-sm font-medium"
                   >
                     <Plus className="w-5 h-5" />
-                    <span>New Task</span>
+                    <span>Yeni Görev</span>
                   </button>
                 </div>
               </div>

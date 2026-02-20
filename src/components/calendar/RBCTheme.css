@@ -17,7 +17,8 @@
 
 /* ── Toolbar ── */
 .rbc-toolbar {
-  display: none; /* We use our own header controls */
+  display: none;
+  /* We use our own header controls */
 }
 
 /* ── Month View Header (Mon, Tue...) ─────────────────────── */
@@ -39,7 +40,7 @@
   padding: 10px 6px;
 }
 
-.rbc-header + .rbc-header {
+.rbc-header+.rbc-header {
   border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -57,7 +58,7 @@
   background: rgba(30, 41, 59, 0.8);
 }
 
-.rbc-day-bg + .rbc-day-bg {
+.rbc-day-bg+.rbc-day-bg {
   border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -88,7 +89,7 @@
   font-weight: 700;
 }
 
-.rbc-date-cell.rbc-now > a {
+.rbc-date-cell.rbc-now>a {
   background: rgb(16, 185, 129);
   color: #fff;
   border-radius: 50%;
@@ -100,7 +101,7 @@
   font-size: 0.75rem;
 }
 
-.rbc-date-cell > a {
+.rbc-date-cell>a {
   color: inherit;
   text-decoration: none;
 }
@@ -125,7 +126,7 @@
 }
 
 .rbc-event.rbc-selected {
-  outline: 2px solid rgba(255,255,255,0.5) !important;
+  outline: 2px solid rgba(255, 255, 255, 0.5) !important;
   outline-offset: 1px;
 }
 
@@ -175,17 +176,17 @@
 }
 
 .rbc-time-slot {
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
-  color: rgba(148, 163, 184, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.015);
+  color: rgba(148, 163, 184, 0.4);
   font-size: 0.65rem;
 }
 
 .rbc-timeslot-group {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.rbc-time-content > * + * > * {
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+.rbc-time-content>*+*>* {
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .rbc-time-gutter .rbc-time-slot {
@@ -245,15 +246,15 @@ table.rbc-agenda-table {
   border: none;
 }
 
-table.rbc-agenda-table tbody > tr > td {
+table.rbc-agenda-table tbody>tr>td {
   border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-table.rbc-agenda-table tbody > tr + tr {
+table.rbc-agenda-table tbody>tr+tr {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-table.rbc-agenda-table thead > tr > th {
+table.rbc-agenda-table thead>tr>th {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(15, 23, 42, 0.9);
   color: var(--color-text-tertiary, #64748b);

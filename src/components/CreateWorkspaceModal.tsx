@@ -41,7 +41,7 @@ export function CreateWorkspaceModal({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      showToast('Please enter a workspace name', 'error', 2000)
+      showToast('Lütfen bir çalışma alanı adı girin', 'error', 2000)
       return
     }
 
@@ -53,19 +53,19 @@ export function CreateWorkspaceModal({
           icon: selectedIcon,
           color: selectedColor,
         })
-        showToast('Workspace updated', 'success', 2000)
+        showToast('Çalışma alanı güncellendi', 'success', 2000)
       } else {
         await createWorkspace({
           name: name.trim(),
           icon: selectedIcon,
           color: selectedColor,
         })
-        showToast('Workspace created', 'success', 2000)
+        showToast('Çalışma alanı oluşturuldu', 'success', 2000)
       }
       onClose()
     } catch (err) {
       console.error('Error saving workspace:', err)
-      showToast('Failed to save workspace', 'error', 3000)
+      showToast('Çalışma alanı kaydedilemedi', 'error', 3000)
     } finally {
       setSaving(false)
     }
@@ -96,7 +96,7 @@ export function CreateWorkspaceModal({
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-text-primary">
-                {editingWorkspace ? 'Edit Workspace' : 'Create New Workspace'}
+                {editingWorkspace ? 'Çalışma Alanını Düzenle' : 'Yeni Çalışma Alanı Oluştur'}
               </h2>
               <button
                 onClick={onClose}
@@ -111,13 +111,13 @@ export function CreateWorkspaceModal({
               {/* Name Input */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Name <span className="text-danger">*</span>
+                  İsim <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Work, Personal, School"
+                  placeholder="örn. İş, Kişisel, Okul"
                   className="w-full px-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
                 />
@@ -126,7 +126,7 @@ export function CreateWorkspaceModal({
               {/* Icon Picker */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Icon
+                  Simge
                 </label>
                 <div className="relative">
                   <button
@@ -173,7 +173,7 @@ export function CreateWorkspaceModal({
               {/* Color Picker */}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Color
+                  Renk
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {WORKSPACE_COLORS.map((color) => (
@@ -182,10 +182,9 @@ export function CreateWorkspaceModal({
                       onClick={() => setSelectedColor(color.value)}
                       className={`
                         w-10 h-10 rounded-full border-2 transition-all
-                        ${
-                          selectedColor === color.value
-                            ? 'border-text-primary scale-110'
-                            : 'border-background-tertiary hover:border-primary/50'
+                        ${selectedColor === color.value
+                          ? 'border-text-primary scale-110'
+                          : 'border-background-tertiary hover:border-primary/50'
                         }
                       `}
                       style={{ backgroundColor: color.value }}
@@ -201,14 +200,14 @@ export function CreateWorkspaceModal({
                 onClick={onClose}
                 className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                İptal
               </button>
               <button
                 onClick={handleSave}
                 disabled={!name.trim() || saving}
                 className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50"
               >
-                {saving ? 'Saving...' : editingWorkspace ? 'Update' : 'Create'}
+                {saving ? 'Kaydediliyor...' : editingWorkspace ? 'Güncelle' : 'Oluştur'}
               </button>
             </div>
           </div>
@@ -217,4 +216,3 @@ export function CreateWorkspaceModal({
     </AnimatePresence>
   )
 }
-

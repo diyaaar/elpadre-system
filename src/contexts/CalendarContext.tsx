@@ -222,14 +222,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const connectGoogleCalendar = useCallback(async () => {
     try {
       if (!user) {
-        showToast('Please log in to connect Google Calendar', 'error', 3000)
+        showToast('Google Takvim\'i bağlamak için lütfen giriş yapın', 'error', 3000)
         return
       }
       // Redirect to OAuth endpoint with user_id
       window.location.href = `/api/calendar/auth/connect?user_id=${user.id}`
     } catch (err) {
       console.error('Error connecting Google Calendar:', err)
-      showToast('Failed to connect Google Calendar', 'error', 3000)
+      showToast('Google Takvim bağlantısı başarısız oldu', 'error', 3000)
     }
   }, [user, showToast])
 
@@ -240,15 +240,15 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to disconnect')
+        throw new Error('Bağlantı kesilemedi')
       }
 
       setIsAuthenticated(false)
       setEvents([])
-      showToast('Google Calendar disconnected', 'success', 2000)
+      showToast('Google Takvim bağlantısı kesildi', 'success', 2000)
     } catch (err) {
       console.error('Error disconnecting Google Calendar:', err)
-      showToast('Failed to disconnect Google Calendar', 'error', 3000)
+      showToast('Google Takvim bağlantısı kesilemedi', 'error', 3000)
     }
   }, [showToast])
 
@@ -284,7 +284,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
-        throw new Error('Not authenticated')
+        throw new Error('Oturum açılmadı')
       }
 
       // Fetch ALL events (don't filter by selectedCalendarIds here - we'll filter in memory)
@@ -299,7 +299,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       )
 
       if (!response.ok) {
-        throw new Error('Failed to fetch events')
+        throw new Error('Etkinlikler getirilemedi')
       }
 
       const data = await response.json()
@@ -318,7 +318,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events')
       // Only show toast on initial load or explicit errors
       if (initialLoad || showLoading) {
-        showToast('Failed to fetch calendar events', 'error', 3000)
+        showToast('Takvim etkinlikleri getirilemedi', 'error', 3000)
       }
     } finally {
       if (showLoading || initialLoad) {
@@ -467,18 +467,18 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}))
-        throw new Error(errData?.error || 'Failed to create event')
+        throw new Error(errData?.error || 'Etkinlik oluşturulamadı')
       }
 
       const newEvent = await response.json()
       // Invalidate cache so next fetch gets fresh events
       eventsCacheRef.current.clear()
       setEvents((prev) => [...prev, newEvent])
-      showToast('Event created successfully', 'success', 2000)
+      showToast('Etkinlik başarıyla oluşturuldu', 'success', 2000)
       return newEvent
     } catch (err) {
       console.error('Error creating event:', err)
-      showToast(err instanceof Error ? err.message : 'Failed to create event', 'error', 3000)
+      showToast(err instanceof Error ? err.message : 'Etkinlik oluşturulamadı', 'error', 3000)
       return null
     }
   }, [isAuthenticated, user, showToast])
@@ -500,15 +500,15 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update event')
+        throw new Error('Etkinlik güncellenemedi')
       }
 
       const updatedEvent = await response.json()
       setEvents((prev) => prev.map((e) => (e.id === id ? updatedEvent : e)))
-      showToast('Event updated successfully', 'success', 2000)
+      showToast('Etkinlik başarıyla güncellendi', 'success', 2000)
     } catch (err) {
       console.error('Error updating event:', err)
-      showToast('Failed to update event', 'error', 3000)
+      showToast('Etkinlik güncellenemedi', 'error', 3000)
     }
   }, [isAuthenticated, user, events, showToast])
 
@@ -524,14 +524,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to delete event')
+        throw new Error('Etkinlik silinemedi')
       }
 
       setEvents((prev) => prev.filter((e) => e.id !== id))
-      showToast('Event deleted successfully', 'success', 2000)
+      showToast('Etkinlik başarıyla silindi', 'success', 2000)
     } catch (err) {
       console.error('Error deleting event:', err)
-      showToast('Failed to delete event', 'error', 3000)
+      showToast('Etkinlik silinemedi', 'error', 3000)
     }
   }, [isAuthenticated, user, events, showToast])
 

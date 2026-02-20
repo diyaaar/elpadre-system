@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, X, ChevronLeft, Menu } from 'lucide-react'
+import { Calendar, X, ChevronLeft } from 'lucide-react'
 import { useCalendar } from '../../contexts/CalendarContext'
 
 interface CalendarSidebarProps {
@@ -13,20 +13,6 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
 
   return (
     <>
-      {/* Toggle Button - Visible when sidebar is closed (both mobile and desktop) */}
-      {!isOpen && (
-        <motion.button
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -10 }}
-          onClick={onToggle}
-          className="fixed left-2 top-20 z-50 p-3 bg-background-secondary border border-background-tertiary rounded-lg shadow-lg hover:bg-background-tertiary active:bg-background-tertiary/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Open calendar list"
-        >
-          <Menu className="w-5 h-5 text-text-primary" />
-        </motion.button>
-      )}
-
       {/* Desktop Sidebar - Always rendered, smooth width/opacity animation */}
       <motion.div
         initial={false}
@@ -49,90 +35,89 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
             pointerEvents: isOpen ? 'auto' : 'none',
           }}
         >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
-                <h3 className="text-lg font-bold text-text-primary">Calendars</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onToggle}
-                  className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label="Close sidebar"
-                  title="Close sidebar"
-                >
-                  <ChevronLeft className="w-4 h-4 text-text-tertiary" />
-                </button>
-              </div>
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
+              <h3 className="text-lg font-bold text-text-primary">Takvimler</h3>
             </div>
-
-            {/* Calendar List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {loading ? (
-                <div className="text-sm text-text-tertiary text-center py-8">
-                  Loading calendars...
-                </div>
-              ) : calendars.length === 0 ? (
-                <div className="text-sm text-text-tertiary text-center py-8">
-                  No calendars found. Connect Google Calendar to get started.
-                </div>
-              ) : (
-                calendars.map((calendar) => {
-                  const isSelected = selectedCalendarIds.includes(calendar.id)
-                  return (
-                    <motion.div
-                      key={calendar.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-tertiary transition-colors cursor-pointer group"
-                      onClick={() => toggleCalendar(calendar.id)}
-                    >
-                      {/* Color Indicator */}
-                      <div
-                        className="w-4 h-4 rounded-full flex-shrink-0 border-2 border-background-tertiary"
-                        style={{
-                          backgroundColor: isSelected ? calendar.color : 'transparent',
-                          borderColor: isSelected ? calendar.color : calendar.color,
-                        }}
-                      >
-                        {isSelected && (
-                          <div className="w-full h-full rounded-full bg-white/20" />
-                        )}
-                      </div>
-
-                      {/* Calendar Name */}
-                      <span
-                        className={`flex-1 text-sm font-medium transition-colors ${
-                          isSelected ? 'text-text-primary' : 'text-text-secondary'
-                        }`}
-                      >
-                        {calendar.name}
-                      </span>
-
-                      {/* Checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleCalendar(calendar.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 rounded border-background-tertiary text-primary focus:ring-2 focus:ring-primary cursor-pointer"
-                        aria-label={`Toggle ${calendar.name} calendar`}
-                      />
-                    </motion.div>
-                  )
-                })
-              )}
-            </div>
-
-            {/* Footer Info */}
-            <div className="p-4 border-t border-background-tertiary flex-shrink-0">
-              <p className="text-xs text-text-tertiary text-center">
-                {selectedCalendarIds.length} of {calendars.length} calendars shown
-              </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onToggle}
+                className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Kenar çubuğunu kapat"
+                title="Kenar çubuğunu kapat"
+              >
+                <ChevronLeft className="w-4 h-4 text-text-tertiary" />
+              </button>
             </div>
           </div>
-        </motion.div>
+
+          {/* Calendar List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {loading ? (
+              <div className="text-sm text-text-tertiary text-center py-8">
+                Takvimler yükleniyor...
+              </div>
+            ) : calendars.length === 0 ? (
+              <div className="text-sm text-text-tertiary text-center py-8">
+                Takvim bulunamadı. Başlamak için Google Takvim'i bağlayın.
+              </div>
+            ) : (
+              calendars.map((calendar) => {
+                const isSelected = selectedCalendarIds.includes(calendar.id)
+                return (
+                  <motion.div
+                    key={calendar.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-tertiary transition-colors cursor-pointer group"
+                    onClick={() => toggleCalendar(calendar.id)}
+                  >
+                    {/* Color Indicator */}
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0 border-2 border-background-tertiary"
+                      style={{
+                        backgroundColor: isSelected ? calendar.color : 'transparent',
+                        borderColor: isSelected ? calendar.color : calendar.color,
+                      }}
+                    >
+                      {isSelected && (
+                        <div className="w-full h-full rounded-full bg-white/20" />
+                      )}
+                    </div>
+
+                    {/* Calendar Name */}
+                    <span
+                      className={`flex-1 text-sm font-medium transition-colors ${isSelected ? 'text-text-primary' : 'text-text-secondary'
+                        }`}
+                    >
+                      {calendar.name}
+                    </span>
+
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleCalendar(calendar.id)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-background-tertiary text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                      aria-label={`Toggle ${calendar.name} calendar`}
+                    />
+                  </motion.div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Footer Info */}
+          <div className="p-4 border-t border-background-tertiary flex-shrink-0">
+            <p className="text-xs text-text-tertiary text-center">
+              {calendars.length} takvimden {selectedCalendarIds.length} tanesi gösteriliyor
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Mobile Sidebar - Slide in/out animation */}
       <AnimatePresence>
@@ -155,20 +140,20 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               className="fixed left-0 top-0 bottom-0 z-50 md:hidden bg-background-secondary border-r border-background-tertiary shadow-xl flex flex-col overflow-hidden w-[50vw] max-w-[280px] min-w-[240px]"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-background-tertiary flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-primary flex-shrink-0" />
-                  <h3 className="text-lg font-bold text-text-primary">Calendars</h3>
+                  <h3 className="text-lg font-bold text-text-primary">Takvimler</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={onToggle}
                     className="p-1.5 hover:bg-background-tertiary active:bg-background-tertiary/80 rounded-lg transition-colors flex-shrink-0 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    aria-label="Close sidebar"
-                    title="Close sidebar"
+                    aria-label="Kenar çubuğunu kapat"
+                    title="Kenar çubuğunu kapat"
                   >
                     <X className="w-5 h-5 text-text-tertiary" />
                   </button>
@@ -179,11 +164,11 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {loading ? (
                   <div className="text-sm text-text-tertiary text-center py-8">
-                    Loading calendars...
+                    Takvimler yükleniyor...
                   </div>
                 ) : calendars.length === 0 ? (
                   <div className="text-sm text-text-tertiary text-center py-8">
-                    No calendars found. Connect Google Calendar to get started.
+                    Takvim bulunamadı. Başlamak için Google Takvim'i bağlayın.
                   </div>
                 ) : (
                   calendars.map((calendar) => {
@@ -211,9 +196,8 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
 
                         {/* Calendar Name */}
                         <span
-                          className={`flex-1 text-sm font-medium transition-colors ${
-                            isSelected ? 'text-text-primary' : 'text-text-secondary'
-                          }`}
+                          className={`flex-1 text-sm font-medium transition-colors ${isSelected ? 'text-text-primary' : 'text-text-secondary'
+                            }`}
                         >
                           {calendar.name}
                         </span>
@@ -236,7 +220,7 @@ export function CalendarSidebar({ isOpen, onToggle }: CalendarSidebarProps) {
               {/* Footer Info */}
               <div className="p-4 border-t border-background-tertiary flex-shrink-0">
                 <p className="text-xs text-text-tertiary text-center">
-                  {selectedCalendarIds.length} of {calendars.length} calendars shown
+                  {calendars.length} takvimden {selectedCalendarIds.length} tanesi gösteriliyor
                 </p>
               </div>
             </motion.div>

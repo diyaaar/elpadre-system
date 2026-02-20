@@ -98,10 +98,10 @@ export function NaturalLanguageInput() {
 
       setInput('')
       setIsOpen(false)
-      showToast(rawMode ? 'Task created' : 'Task created with AI', 'success')
+      showToast(rawMode ? 'Görev oluşturuldu' : 'Görev AI ile oluşturuldu', 'success')
     } catch (err) {
       console.error('Error processing task:', err)
-      showToast('Failed to create task', 'error')
+      showToast('Görev oluşturulamadı', 'error')
     } finally {
       setIsProcessing(false)
     }
@@ -125,7 +125,7 @@ export function NaturalLanguageInput() {
         className="flex items-center gap-2 px-4 py-2.5 bg-background-elevated hover:bg-background-tertiary text-text-secondary hover:text-white rounded-xl border border-white/5 transition-all duration-200 text-sm font-medium"
       >
         <Sparkles className="w-4 h-4 text-primary" />
-        <span>Ask AI</span>
+        <span>AI'ya Sor</span>
       </button>
 
       {/* Modal Overlay */}
@@ -150,7 +150,7 @@ export function NaturalLanguageInput() {
               <div className="p-4 border-b border-white/5 flex items-center justify-between bg-primary/5">
                 <div className="flex items-center gap-2 text-primary">
                   <Sparkles className="w-5 h-5" />
-                  <span className="font-medium">Create with AI</span>
+                  <span className="font-medium">AI ile Oluştur</span>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -166,14 +166,14 @@ export function NaturalLanguageInput() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Describe your task naturally... (e.g. 'Update website banner tomorrow at 10am priority high #design')"
+                  placeholder="Görevinizi doğal bir dille tanımlayın... (örn. 'Yarın sabah 10'da web sitesi banner'ını güncelle öncelik yüksek #tasarım')"
                   className="w-full bg-transparent border-none p-0 text-lg resize-none focus:ring-0 text-text-primary placeholder:text-text-tertiary/50 min-h-[100px]"
                 />
               </div>
 
               <div className="p-4 bg-background-tertiary/30 border-t border-white/5 flex items-center justify-between">
                 <div className="text-xs text-text-tertiary">
-                  Press <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-sans mx-1">Enter</kbd> to create
+                  Oluşturmak için <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-sans mx-1">Enter</kbd>'a basın
                 </div>
                 <button
                   onClick={handleSubmit}
@@ -189,12 +189,12 @@ export function NaturalLanguageInput() {
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating...</span>
+                      <span>Oluşturuluyor...</span>
                     </>
                   ) : (
                     <>
                       <ArrowUp className="w-4 h-4" />
-                      <span>Create Task</span>
+                      <span>Görev Oluştur</span>
                     </>
                   )}
                 </button>

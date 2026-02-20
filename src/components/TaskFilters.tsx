@@ -49,7 +49,7 @@ export function TaskFilters() {
           <input
             type="text"
             className="block w-full pl-10 pr-10 py-2.5 bg-background-elevated/50 border border-white/5 rounded-xl text-sm placeholder:text-text-tertiary/50 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all shadow-sm text-text-primary"
-            placeholder="Search tasks..."
+            placeholder="Görevlerde ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -77,7 +77,7 @@ export function TaskFilters() {
             `}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span>Filters</span>
+            <span>Filtreler</span>
             {hasActiveFilters && (
               <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
             )}
@@ -95,7 +95,7 @@ export function TaskFilters() {
             `}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span>Filters</span>
+            <span>Filtreler</span>
             {hasActiveFilters && (
               <span className="w-1.5 h-1.5 rounded-full bg-primary-light ml-0.5 animate-pulse" />
             )}
@@ -107,9 +107,9 @@ export function TaskFilters() {
               onChange={(e) => setSortBy(e.target.value as TaskSort)}
               className="appearance-none pl-9 pr-8 py-2.5 bg-background-elevated/50 border border-white/5 rounded-xl text-sm text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:bg-background-tertiary transition-colors min-w-[160px]"
             >
-              <option value="created">Newest First</option>
-              <option value="deadline">Due Soonest</option>
-              <option value="priority">Highest Priority</option>
+              <option value="created">Önce En Yeni</option>
+              <option value="deadline">Tarihi En Yakın</option>
+              <option value="priority">En Yüksek Öncelik</option>
               <option value="alphabetical">A-Z</option>
             </select>
             <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -135,7 +135,7 @@ export function TaskFilters() {
             <div className="p-4 bg-background-elevated/30 border border-white/5 rounded-xl space-y-4 shadow-inner mt-2">
               <div className="flex flex-wrap gap-4">
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-                  <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Status</label>
+                  <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Durum</label>
                   <div className="flex bg-background-tertiary/50 p-1 rounded-lg border border-white/5">
                     {(['all', 'active', 'completed'] as const).map(status => (
                       <button
@@ -143,19 +143,19 @@ export function TaskFilters() {
                         onClick={() => setFilterStatus(status as TaskFilter)}
                         className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium capitalize transition-all ${filterStatus === status ? 'bg-background-elevated text-text-primary shadow-sm' : 'text-text-tertiary hover:text-text-secondary'}`}
                       >
-                        {status}
+                        {status === 'all' ? 'Hepsi' : status === 'active' ? 'Aktif' : 'Tamamlanan'}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5 flex-[2] min-w-[250px]">
-                  <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Tags</label>
+                  <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Etiketler</label>
                   <TagInput
                     selectedTags={selectedTagObjects}
                     onTagsChange={(newTags: TagOption[]) => setSelectedTagIds(newTags.map((t: TagOption) => t.id))}
                     onCreateTag={async () => null} // Disable creation
-                    placeholder="Filter by tags..."
+                    placeholder="Etiketlere göre filtrele..."
                     className="bg-background-tertiary/50 border-white/5 w-full"
                   />
                 </div>
@@ -168,7 +168,7 @@ export function TaskFilters() {
                     className="text-xs text-text-tertiary hover:text-danger transition-colors flex items-center gap-1"
                   >
                     <X className="w-3 h-3" />
-                    Clear all filters
+                    Tüm filtreleri temizle
                   </button>
                 </div>
               )}
