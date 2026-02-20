@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Camera, Calendar, List } from 'lucide-react'
+import { Plus, Camera, Calendar, List, Wallet } from 'lucide-react'
 import { useTasks } from '../contexts/TasksContext'
 import { useWorkspaces } from '../contexts/WorkspacesContext'
 import { useUndoSnackbar } from '../contexts/UndoSnackbarContext'
@@ -12,9 +12,10 @@ import { WorkspaceNavigation } from '../components/WorkspaceNavigation'
 import { PhotoTaskRecognition } from '../components/PhotoTaskRecognition'
 import { UndoSnackbar } from '../components/UndoSnackbar'
 import { CalendarPage } from './CalendarPage'
+import { FinancePage } from '../domains/finance/FinancePage'
 import { motion, AnimatePresence } from 'framer-motion'
 
-type ViewMode = 'tasks' | 'calendar'
+type ViewMode = 'tasks' | 'calendar' | 'finance'
 
 export function HomePage() {
   const { loading, error, filteredAndSortedTasks } = useTasks()
@@ -95,6 +96,24 @@ export function HomePage() {
                 )}
                 <Calendar className="w-4 h-4 relative z-10" />
                 <span className="relative z-10">Takvim</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('finance')}
+                className={`
+                  relative flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300
+                  ${viewMode === 'finance' ? 'text-white' : 'text-text-tertiary hover:text-text-primary'}
+                `}
+              >
+                {viewMode === 'finance' && (
+                  <motion.div
+                    layoutId="viewModeBg"
+                    className="absolute inset-0 bg-primary/20 border border-primary/20 rounded-lg shadow-glow-primary"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Wallet className="w-4 h-4 relative z-10" />
+                <span className="relative z-10">Finans</span>
               </button>
             </div>
           </div>
@@ -205,7 +224,7 @@ export function HomePage() {
                 </AnimatePresence>
               </div>
             </motion.div>
-          ) : (
+          ) : viewMode === 'calendar' ? (
             <motion.div
               key="calendar"
               initial={{ opacity: 0, x: 20 }}
@@ -215,6 +234,17 @@ export function HomePage() {
               className="bg-background-secondary/50 border border-white/5 rounded-2xl overflow-hidden shadow-xl backdrop-blur-sm"
             >
               <CalendarPage />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="finance"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="bg-background-secondary/50 border border-white/5 rounded-2xl overflow-hidden shadow-xl backdrop-blur-sm"
+            >
+              <FinancePage />
             </motion.div>
           )}
         </AnimatePresence>
