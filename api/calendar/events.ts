@@ -2,6 +2,15 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { google } from 'googleapis'
 import { createClient } from '@supabase/supabase-js'
 
+// ── Local types ──────────────────────────────────────────────
+interface CalendarRecord {
+  id: string
+  google_calendar_id: string | null
+  color: string
+  name: string
+  is_primary: boolean
+}
+
 // ── Supabase client factory ──────────────────────────────────
 function getSupabase() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -119,13 +128,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let calendarsToFetch: Array<{ id: string; googleId: string; color: string; name: string }> = []
 
       if (userCalendars && userCalendars.length > 0) {
-        const filtered = requestedCalendarIds.length > 0
-          ? userCalendars.filter(c => requestedCalendarIds.includes(c.id))
+        const filtered: CalendarRecord[] = requestedCalendarIds.length > 0
+          ? userCalendars.filter((c: CalendarRecord) => requestedCalendarIds.includes(c.id))
           : userCalendars
 
         calendarsToFetch = filtered
-          .filter(c => c.google_calendar_id)
-          .map(c => ({
+          .filter((c: CalendarRecord) => c.google_calendar_id)
+          .map((c: CalendarRecord) => ({
             id: c.id,
             googleId: c.google_calendar_id!,
             color: c.color,
