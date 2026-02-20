@@ -24,7 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    return res.status(500).json({ error: 'Supabase configuration missing' })
+    console.error('[calendars] Missing Supabase config:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      method: req.method,
+    })
+    return res.status(500).json({ error: 'Supabase configuration missing', detail: { hasUrl: !!supabaseUrl, hasServiceKey: !!supabaseServiceKey } })
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -62,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     try {
       // Sync calendars from Google Calendar
+      console.log('[calendars POST] Starting sync for user:', userId)
       const { data: tokens, error: tokenError } = await supabase
         .from('google_calendar_tokens')
         .select('*')
@@ -69,13 +75,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (tokenError || !tokens) {
+        console.error('[calendars POST] Token fetch error:', tokenError)
         return res.status(401).json({ error: 'Google Calendar not connected' })
       }
 
       // Refresh token if needed
       const now = Date.now()
       let accessToken = tokens.access_token
-      
+
       if (tokens.expiry_date - now < 5 * 60 * 1000) {
         const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
@@ -91,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json()
           accessToken = refreshData.access_token
-          
+
           await supabase
             .from('google_calendar_tokens')
             .update({
@@ -183,9 +190,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       return res.status(200).json({ calendars: syncedCalendars })
-    } catch (err) {
-      console.error('Error syncing calendars:', err)
-      return res.status(500).json({ error: 'Failed to sync calendars' })
+    } catch (err: any) {
+      console.error('[calendars POST] Error syncing calendars:', {
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+      })
+      return res.status(500).json({ error: 'Failed to sync calendars', detail: err?.message })
     }
   }
 
