@@ -486,62 +486,86 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const updateEvent = useCallback(async (id: string, updates: Partial<CalendarEvent>): Promise<void> => {
     if (!isAuthenticated || !user) return
 
+    // --- Optimistic update ---
+    const previousEvents = events
+    setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...updates } : e)))
+
     try {
       const supabase = (await import('../lib/supabase')).getSupabaseClient()
       const { data: { session } } = await supabase.auth.getSession()
 
-      // Find current event to know which calendar it belongs to
-      const currentEvent = events.find(e => e.id === id)
-      const calendarIdQuery = currentEvent?.calendarId ? `&calendarId=${encodeURIComponent(currentEvent.calendarId)}` : ''
+      const currentEvent = previousEvents.find(e => e.id === id)
+      const calendarId = currentEvent?.calendarId || 'primary'
 
-      const response = await fetch(`/api/calendar/events/${id}?user_id=${user.id}${calendarIdQuery}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify(updates),
-      })
+      const response = await fetch(
+        `/api/calendar/events/${id}?user_id=${user.id}&calendarId=${encodeURIComponent(calendarId)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            ...updates,
+            // Make sure calendarId is in the body too (belt-and-suspenders)
+            calendarId,
+          }),
+        }
+      )
 
       if (!response.ok) {
-        throw new Error('Etkinlik güncellenemedi')
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData?.detail || errData?.error || 'Etkinlik güncellenemedi')
       }
 
       const updatedEvent = await response.json()
-      setEvents((prev) => prev.map((e) => (e.id === id ? updatedEvent : e)))
+      // Sync with server's canonical response
+      setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...updatedEvent } : e)))
       showToast('Etkinlik başarıyla güncellendi', 'success', 2000)
     } catch (err) {
       console.error('Error updating event:', err)
-      showToast('Etkinlik güncellenemedi', 'error', 3000)
+      // --- Rollback ---
+      setEvents(previousEvents)
+      showToast(err instanceof Error ? err.message : 'Etkinlik güncellenemedi', 'error', 3000)
     }
   }, [isAuthenticated, user, events, showToast])
 
   const deleteEvent = useCallback(async (id: string): Promise<void> => {
     if (!isAuthenticated || !user) return
 
+    // --- Optimistic removal ---
+    const previousEvents = events
+    setEvents(prev => prev.filter(e => e.id !== id))
+
     try {
       const supabase = (await import('../lib/supabase')).getSupabaseClient()
       const { data: { session } } = await supabase.auth.getSession()
 
-      const currentEvent = events.find(e => e.id === id)
-      const calendarIdQuery = currentEvent?.calendarId ? `&calendarId=${encodeURIComponent(currentEvent.calendarId)}` : ''
+      const currentEvent = previousEvents.find(e => e.id === id)
+      const calendarId = currentEvent?.calendarId || 'primary'
 
-      const response = await fetch(`/api/calendar/events/${id}?user_id=${user.id}${calendarIdQuery}`, {
-        method: 'DELETE',
-        headers: {
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-      })
+      const response = await fetch(
+        `/api/calendar/events/${id}?user_id=${user.id}&calendarId=${encodeURIComponent(calendarId)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+        }
+      )
 
-      if (!response.ok) {
-        throw new Error('Etkinlik silinemedi')
+      // 204 = success, 404/410 = already gone — both are fine
+      if (!response.ok && response.status !== 204 && response.status !== 404 && response.status !== 410) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData?.detail || errData?.error || 'Etkinlik silinemedi')
       }
 
-      setEvents((prev) => prev.filter((e) => e.id !== id))
       showToast('Etkinlik başarıyla silindi', 'success', 2000)
     } catch (err) {
       console.error('Error deleting event:', err)
-      showToast('Etkinlik silinemedi', 'error', 3000)
+      // --- Rollback ---
+      setEvents(previousEvents)
+      showToast(err instanceof Error ? err.message : 'Etkinlik silinemedi', 'error', 3000)
     }
   }, [isAuthenticated, user, events, showToast])
 

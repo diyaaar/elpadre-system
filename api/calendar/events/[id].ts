@@ -17,19 +17,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Event ID is required' })
   }
 
-  // Get user ID from Authorization header or session
   const authHeader = req.headers.authorization
   if (!authHeader) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  let userId: string | null = null
-  try {
-    userId = req.query.user_id as string || (req.body && req.body.user_id) || null
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid authentication' })
-  }
-
+  const userId = req.query.user_id as string || (req.body && req.body.user_id) || null
   if (!userId) {
     return res.status(401).json({ error: 'User ID required' })
   }
@@ -37,20 +30,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Initialize Supabase client
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Missing Supabase environment variables in event edit endpoint')
     return res.status(500).json({ error: 'Supabase configuration missing' })
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  // Get user's tokens
   const { data: tokens, error: tokenError } = await supabase
     .from('google_calendar_tokens')
     .select('*')
@@ -61,81 +48,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Google Calendar not connected' })
   }
 
-  // Initialize Google Calendar API
+  // Always use the freshest bearer token from the request header
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : tokens.access_token
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET
   )
-
-  // Use the bearer token from request header as it's the freshest
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : tokens.access_token
   oauth2Client.setCredentials({ access_token: bearerToken })
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
 
+  // ── PATCH: Update event using events.patch() (only sends changed fields) ──
   if (req.method === 'PATCH') {
     try {
-      const updates = req.body
-      const calendarId = (req.query.calendarId as string) || req.body?.calendarId || 'primary'
+      const body = req.body
+      const calendarId = (req.query.calendarId as string) || body?.calendarId || 'primary'
 
-      console.log(`[PATCH] Updating event ${id} on calendar ${calendarId}`)
+      console.log(`[PATCH] event=${id} calendar=${calendarId}`)
 
-      // First fetch the existing event to merge with updates properly
-      const eventResponse = await calendar.events.get({
-        calendarId,
-        eventId: id,
-      })
-      const event = eventResponse.data
+      // Build start/end according to allDay flag
+      type DateField = { date: string } | { dateTime: string; timeZone: string }
+      let startField: DateField | undefined
+      let endField: DateField | undefined
 
-      // Apply updates
-      if (updates.summary) event.summary = updates.summary
-      if (updates.description !== undefined) event.description = updates.description
-      if (updates.start) event.start = { dateTime: updates.start, timeZone: updates.timeZone || 'Europe/Istanbul' }
-      if (updates.end) event.end = { dateTime: updates.end, timeZone: updates.timeZone || 'Europe/Istanbul' }
-      if (updates.colorId !== undefined) event.colorId = updates.colorId ? String(updates.colorId) : undefined
-      if (updates.location !== undefined) event.location = updates.location
-
-      const response = await calendar.events.update({
-        calendarId,
-        eventId: id,
-        requestBody: event,
-      })
-
-      const eventData = response.data
-      const updatedEventFormatted = {
-        id: eventData.id || '',
-        summary: eventData.summary || 'Başlıksız Etkinlik',
-        description: eventData.description || undefined,
-        start: eventData.start?.dateTime || eventData.start?.date || '',
-        end: eventData.end?.dateTime || eventData.end?.date || '',
-        colorId: eventData.colorId || undefined,
-        location: eventData.location || undefined,
-        calendarId,
+      if (body.allDay) {
+        // All-day event: use "date" field (YYYY-MM-DD), no timeZone
+        const startDate = typeof body.start === 'string' ? body.start.slice(0, 10) : undefined
+        const endDate = typeof body.end === 'string' ? body.end.slice(0, 10) : undefined
+        if (startDate) startField = { date: startDate }
+        if (endDate) endField = { date: endDate }
+      } else {
+        // Timed event: use "dateTime" with explicit timeZone
+        const tz = body.timeZone || 'Europe/Istanbul'
+        if (body.start) startField = { dateTime: body.start, timeZone: tz }
+        if (body.end) endField = { dateTime: body.end, timeZone: tz }
       }
 
-      return res.status(200).json(updatedEventFormatted)
+      // Use patch() — only sends the fields we provide, no ETag conflicts
+      const patchBody: Record<string, unknown> = {}
+      if (body.summary !== undefined) patchBody.summary = body.summary
+      if (body.description !== undefined) patchBody.description = body.description || null
+      if (body.location !== undefined) patchBody.location = body.location || null
+      if (body.colorId !== undefined) patchBody.colorId = body.colorId ? String(body.colorId) : null
+      if (startField) patchBody.start = startField
+      if (endField) patchBody.end = endField
+
+      const response = await calendar.events.patch({
+        calendarId,
+        eventId: id,
+        requestBody: patchBody,
+      })
+
+      const ev = response.data
+      return res.status(200).json({
+        id: ev.id || '',
+        summary: ev.summary || 'Başlıksız Etkinlik',
+        description: ev.description || undefined,
+        start: ev.start?.dateTime || ev.start?.date || '',
+        end: ev.end?.dateTime || ev.end?.date || '',
+        colorId: ev.colorId || undefined,
+        location: ev.location || undefined,
+        calendarId,
+        allDay: !!ev.start?.date,
+      })
     } catch (err) {
       console.error('Error updating event:', err)
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      return res.status(500).json({ error: 'Failed to update event', detail: message })
+      const detail = err instanceof Error ? err.message : String(err)
+      return res.status(500).json({ error: 'Failed to update event', detail })
     }
   }
 
+  // ── DELETE: Remove event, handle "already deleted" gracefully ──
   if (req.method === 'DELETE') {
     try {
       const calendarId = (req.query.calendarId as string) || 'primary'
 
-      console.log(`[DELETE] Deleting event ${id} from calendar ${calendarId}`)
+      console.log(`[DELETE] event=${id} calendar=${calendarId}`)
 
-      await calendar.events.delete({
-        calendarId,
-        eventId: id,
-      })
+      await calendar.events.delete({ calendarId, eventId: id })
 
-      return res.status(200).json({ success: true })
-    } catch (err) {
+      // 204 No Content is the correct success response for DELETE
+      return res.status(204).end()
+    } catch (err: unknown) {
+      const status = (err as { code?: number })?.code
+      // 404 / 410 = already deleted — treat as success
+      if (status === 404 || status === 410) {
+        return res.status(204).end()
+      }
       console.error('Error deleting event:', err)
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      return res.status(500).json({ error: 'Failed to delete event', detail: message })
+      const detail = err instanceof Error ? err.message : String(err)
+      return res.status(500).json({ error: 'Failed to delete event', detail })
     }
   }
 
