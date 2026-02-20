@@ -530,13 +530,15 @@ export function Task({ task, depth = 0 }: TaskProps) {
           </div>
         </div>
 
-        {/* Mobile Action Toggle */}
-        <button
-          className="md:hidden absolute top-3 right-3 p-2 text-text-tertiary"
-          onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-        >
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        {/* Mobile Action Toggle — hidden while the action bar is open to avoid overlap */}
+        {!showActions && (
+          <button
+            className="md:hidden absolute top-3 right-3 p-2 text-text-tertiary"
+            onClick={(e) => { e.stopPropagation(); setShowActions(true); }}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Expand/Collapse Button (Bottom Center) */}
         {hasSubtasks && (
