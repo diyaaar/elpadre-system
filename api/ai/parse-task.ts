@@ -8,13 +8,13 @@ function getCurrentDateTime() {
   const now = new Date()
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const daysTurkish = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
-  
+
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
-  
+
   return {
     date: `${year}-${month}-${day}`,
     dayOfWeek: days[now.getDay()],
@@ -151,8 +151,8 @@ Return ONLY valid JSON, no explanation. The title MUST be clean, concise, and we
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-      return res.status(response.status).json({ 
-        error: error.error?.message || `OpenAI API error: ${response.statusText}` 
+      return res.status(response.status).json({
+        error: error.error?.message || `OpenAI API error: ${response.statusText}`
       })
     }
 
@@ -174,7 +174,7 @@ Return ONLY valid JSON, no explanation. The title MUST be clean, concise, and we
       }
     } catch (parseError) {
       // Fallback: return basic structure with detected tags
-      const relativeDateMatch = input.match(/(tomorrow|yarın|next|haftaya)/i)
+      // Fallback: return basic structure with detected tags
       return res.status(200).json({
         title: input,
         description: undefined,
@@ -201,10 +201,10 @@ Return ONLY valid JSON, no explanation. The title MUST be clean, concise, and we
     })
   } catch (error) {
     console.error('Error parsing natural language task:', error)
-    
+
     // Fallback: return basic structure
     const detectedTags = detectTags(req.body.input || '')
-    
+
     return res.status(200).json({
       title: req.body.input || '',
       description: undefined,

@@ -103,11 +103,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const updatedEventFormatted = {
         id: eventData.id || '',
         summary: eventData.summary || 'Untitled Event',
-        description: eventData.description,
+        description: eventData.description || undefined,
         start: eventData.start?.dateTime || eventData.start?.date || '',
         end: eventData.end?.dateTime || eventData.end?.date || '',
-        colorId: eventData.colorId,
-        location: eventData.location,
+        colorId: eventData.colorId || undefined,
+        location: eventData.location || undefined,
         calendarId,
       }
 

@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/calendar/auth/callback`
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -22,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Generate state token for CSRF protection and include user_id
   const randomState = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
   const state = `${randomState}:${userId}`
-  
+
   // Store state in a cookie for verification
   res.setHeader('Set-Cookie', `oauth_state=${randomState}; HttpOnly; SameSite=Lax; Path=/; Max-Age=600`)
 

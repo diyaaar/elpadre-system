@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Parse calendar IDs (comma-separated)
-      const requestedCalendarIds = calendarIds 
+      const requestedCalendarIds = calendarIds
         ? (calendarIds as string).split(',').filter(Boolean)
         : []
 
@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Refresh token if needed
       const now = Date.now()
       let accessToken = tokens.access_token
-      
+
       if (tokens.expiry_date - now < 5 * 60 * 1000) {
         // Token expires soon, refresh it
         const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -95,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (refreshResponse.ok) {
           const refreshData = await refreshResponse.json()
           accessToken = refreshData.access_token
-          
+
           // Update stored token
           await supabase
             .from('google_calendar_tokens')
@@ -124,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Determine which calendars to fetch from
       let calendarsToFetch: Array<{ id: string; googleId: string; color: string; name: string }> = []
-      
+
       if (userCalendars && userCalendars.length > 0) {
         // Filter by requested calendar IDs, or use all if none specified
         const calendars = requestedCalendarIds.length > 0
@@ -180,15 +180,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .map((item) => {
               const start = item.start?.dateTime || item.start?.date || ''
               const end = item.end?.dateTime || item.end?.date || ''
-              
+
               return {
                 id: item.id!,
                 summary: item.summary || 'Untitled Event',
-                description: item.description,
+                description: item.description || undefined,
                 start,
                 end,
-                colorId: item.colorId,
-                location: item.location,
+                colorId: item.colorId || undefined,
+                location: item.location || undefined,
                 calendarId: cal.id,
                 color: cal.color,
               }
@@ -214,7 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     try {
       // Create new event in Google Calendar
-      const { summary, description, start, end, color, colorId, location } = req.body
+      const { summary, description, start, end, colorId, location } = req.body
 
       if (!summary || !start || !end) {
         return res.status(400).json({ error: 'summary, start, and end are required' })
@@ -285,15 +285,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const eventData = response.data
       const eventStart = eventData.start?.dateTime || eventData.start?.date || ''
       const eventEnd = eventData.end?.dateTime || eventData.end?.date || ''
-      
+
       const newEvent = {
         id: eventData.id || '',
         summary: eventData.summary || 'Untitled Event',
-        description: eventData.description,
+        description: eventData.description || undefined,
         start: eventStart,
         end: eventEnd,
-        colorId: eventData.colorId,
-        location: eventData.location,
+        colorId: eventData.colorId || undefined,
+        location: eventData.location || undefined,
       }
 
       return res.status(200).json(newEvent)
