@@ -3,10 +3,37 @@ import { createClient } from '@supabase/supabase-js'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/calendar/auth/callback`
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
+// Helper to get the frontend URL dynamically if not configured
+function getFrontendUrl(req: VercelRequest) {
+  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL
+
+  // Try to reconstruct from Host header
+  const host = req.headers.host
+  if (host) {
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    return `${protocol}://${host}`
+  }
+
+  return 'http://localhost:5173'
+}
+
+// Helper to get the redirect URI
+function getRedirectUri(req: VercelRequest) {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI
+
+  const host = req.headers.host
+  if (host) {
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    return `${protocol}://${host}/api/calendar/auth/callback`
+  }
+
+  return 'http://localhost:3000/api/calendar/auth/callback'
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const FRONTEND_URL = getFrontendUrl(req)
+  const REDIRECT_URI = getRedirectUri(req)
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -28,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const stateRandomPart = stateParts[0] // Extract just the random part
   const userId = stateParts.length > 1 ? stateParts[1] : null
   const storedState = req.cookies?.oauth_state
-  
+
   if (!storedState || stateRandomPart !== storedState) {
     console.error('State verification failed:', {
       received: stateRandomPart,
@@ -78,8 +105,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Missing Supabase environment variables:', {
         hasUrl: !!supabaseUrl,
         hasServiceKey: !!supabaseServiceKey,
-        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
       })
+      // If we're missing crucial config, redirect back to frontend with a clear error
       return res.redirect(`${FRONTEND_URL}?calendar_error=configuration_error`)
     }
 

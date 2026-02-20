@@ -1,9 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/calendar/auth/callback`
+// Helper to get the redirect URI
+function getRedirectUri(req: VercelRequest) {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI
+
+  const host = req.headers.host
+  if (host) {
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    return `${protocol}://${host}/api/calendar/auth/callback`
+  }
+
+  return 'http://localhost:3000/api/calendar/auth/callback'
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const REDIRECT_URI = getRedirectUri(req)
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
