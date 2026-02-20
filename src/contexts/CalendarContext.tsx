@@ -487,6 +487,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) return
 
     try {
+      const supabase = (await import('../lib/supabase')).getSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
       // Find current event to know which calendar it belongs to
       const currentEvent = events.find(e => e.id === id)
       const calendarIdQuery = currentEvent?.calendarId ? `&calendarId=${encodeURIComponent(currentEvent.calendarId)}` : ''
@@ -495,6 +498,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify(updates),
       })
@@ -516,11 +520,17 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) return
 
     try {
+      const supabase = (await import('../lib/supabase')).getSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
       const currentEvent = events.find(e => e.id === id)
       const calendarIdQuery = currentEvent?.calendarId ? `&calendarId=${encodeURIComponent(currentEvent.calendarId)}` : ''
 
       const response = await fetch(`/api/calendar/events/${id}?user_id=${user.id}${calendarIdQuery}`, {
         method: 'DELETE',
+        headers: {
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
       })
 
       if (!response.ok) {
