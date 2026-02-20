@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, X, Check, CreditCard, HandCoins } from 'lucide-react'
+import { Plus, X, Check, CreditCard, HandIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import { formatCurrency } from '../types/finance.types'
@@ -100,7 +100,7 @@ export function ObligationSection() {
               ${activeTab === tab ? 'bg-primary/20 text-white border border-primary/30' : 'text-text-tertiary hover:text-white'}
             `}
                     >
-                        {tab === 'payable' ? <CreditCard className="w-3.5 h-3.5" /> : <HandCoins className="w-3.5 h-3.5" />}
+                        {tab === 'payable' ? <CreditCard className="w-3.5 h-3.5" /> : <HandIcon className="w-3.5 h-3.5" />}
                         {tab === 'payable' ? 'Borç' : 'Alacak'}
                     </button>
                 ))}

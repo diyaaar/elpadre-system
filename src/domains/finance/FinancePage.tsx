@@ -24,7 +24,7 @@ const TABS: { id: FinanceTab; label: string; Icon: React.ElementType }[] = [
 ]
 
 export function FinancePage() {
-    const { error, loading } = useFinance()
+    const { error } = useFinance()
     const [activeTab, setActiveTab] = useState<FinanceTab>('dashboard')
 
     return (
