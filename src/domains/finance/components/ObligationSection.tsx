@@ -1,6 +1,7 @@
 // ============================================================
 // OBLIGATION SECTION — List of obligations (payable/receivable)
 // Shows derived remaining_amount — never reads a stored field
+// Both modals use Portal to escape framer-motion transform
 // ============================================================
 
 import { useState } from 'react'
@@ -10,6 +11,7 @@ import { useFinance } from '../../../contexts/FinanceContext'
 import { formatCurrency } from '../types/finance.types'
 import type { ObligationWithDerived } from '../types/finance.types'
 import { TransactionForm } from './TransactionForm'
+import { Portal } from '../../../components/Portal'
 
 export function ObligationSection() {
     const {
@@ -114,7 +116,6 @@ export function ObligationSection() {
             ) : (
                 <div className="space-y-3">
                     {filtered.map((ob) => {
-                        // We don't have remaining_amount here — load it on open
                         const isPastDue = ob.deadline && !ob.is_closed && new Date(ob.deadline) < new Date()
                         return (
                             <motion.div
@@ -155,183 +156,187 @@ export function ObligationSection() {
                 </div>
             )}
 
-            {/* Create Obligation Form Modal */}
+            {/* ── Create Obligation Modal ── */}
             <AnimatePresence>
                 {showForm && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && setShowForm(false)}
-                    >
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.form
-                            onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleCreateObligation(e)}
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-md bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    <Portal>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && setShowForm(false)}
                         >
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                                <h2 className="text-lg font-semibold text-white">Yeni Yükümlülük</h2>
-                                <button type="button" onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                {/* Type */}
-                                <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
-                                    {(['payable', 'receivable'] as const).map((t) => (
-                                        <button key={t} type="button" onClick={() => setFormType(t)}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formType === t ? 'bg-primary/20 text-white border border-primary/30' : 'text-text-tertiary hover:text-white'}`}>
-                                            {t === 'payable' ? 'Borç (Ödenecek)' : 'Alacak (Tahsil edilecek)'}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div>
-                                    <label className="text-xs text-text-tertiary mb-1 block">Açıklama *</label>
-                                    <input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} required
-                                        className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-text-tertiary mb-1 block">Toplam Tutar (₺) *</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">₺</span>
-                                        <input type="number" step="0.01" min="0.01" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} required
-                                            className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs text-text-tertiary mb-1 block">Karşı Taraf</label>
-                                        <input value={formCounterparty} onChange={(e) => setFormCounterparty(e.target.value)}
-                                            className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-text-tertiary mb-1 block">Son Ödeme Tarihi</label>
-                                        <input type="date" value={formDeadline} onChange={(e) => setFormDeadline(e.target.value)}
-                                            className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 pt-1">
-                                    <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-background-elevated text-text-secondary rounded-xl border border-white/5 text-sm">İptal</button>
-                                    <button type="submit" disabled={formSubmitting} className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-60">
-                                        {formSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                            <motion.form
+                                onSubmit={handleCreateObligation}
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                className="relative w-full max-w-md bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                            >
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                                    <h2 className="text-lg font-semibold text-white">Yeni Yükümlülük</h2>
+                                    <button type="button" onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
+                                        <X className="w-4 h-4" />
                                     </button>
                                 </div>
-                            </div>
-                        </motion.form>
-                    </motion.div>
+                                <div className="p-6 space-y-4">
+                                    {/* Type */}
+                                    <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
+                                        {(['payable', 'receivable'] as const).map((t) => (
+                                            <button key={t} type="button" onClick={() => setFormType(t)}
+                                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formType === t ? 'bg-primary/20 text-white border border-primary/30' : 'text-text-tertiary hover:text-white'}`}>
+                                                {t === 'payable' ? 'Borç (Ödenecek)' : 'Alacak (Tahsil edilecek)'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-text-tertiary mb-1 block">Açıklama *</label>
+                                        <input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} required
+                                            className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-text-tertiary mb-1 block">Toplam Tutar (₺) *</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">₺</span>
+                                            <input type="number" step="0.01" min="0.01" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} required
+                                                className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-text-tertiary mb-1 block">Karşı Taraf</label>
+                                            <input value={formCounterparty} onChange={(e) => setFormCounterparty(e.target.value)}
+                                                className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-text-tertiary mb-1 block">Son Ödeme Tarihi</label>
+                                            <input type="date" value={formDeadline} onChange={(e) => setFormDeadline(e.target.value)}
+                                                className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 pt-1">
+                                        <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 bg-background-elevated text-text-secondary rounded-xl border border-white/5 text-sm">İptal</button>
+                                        <button type="submit" disabled={formSubmitting} className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-60">
+                                            {formSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.form>
+                        </motion.div>
+                    </Portal>
                 )}
             </AnimatePresence>
 
-            {/* Obligation Detail Modal */}
+            {/* ── Obligation Detail Modal ── */}
             <AnimatePresence>
                 {(detail || detailLoading) && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && setDetail(null)}
-                    >
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    <Portal>
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-lg bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && setDetail(null)}
                         >
-                            {detailLoading ? (
-                                <div className="h-64 flex items-center justify-center text-text-tertiary">Yükleniyor...</div>
-                            ) : detail ? (
-                                <>
-                                    <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                                        <div>
-                                            <h2 className="text-lg font-semibold text-white">{detail.description}</h2>
-                                            {detail.counterparty && <p className="text-xs text-text-tertiary">{detail.counterparty}</p>}
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                className="relative w-full max-w-lg bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                            >
+                                {detailLoading ? (
+                                    <div className="h-64 flex items-center justify-center text-text-tertiary">Yükleniyor...</div>
+                                ) : detail ? (
+                                    <>
+                                        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                                            <div>
+                                                <h2 className="text-lg font-semibold text-white">{detail.description}</h2>
+                                                {detail.counterparty && <p className="text-xs text-text-tertiary">{detail.counterparty}</p>}
+                                            </div>
+                                            <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
+                                                <X className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-5">
-                                        {/* Derived remaining amount bar — NEVER from stored field */}
-                                        <div>
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-text-tertiary">İlerleme</span>
-                                                <span className="text-white font-medium">
-                                                    {formatCurrency(detail.total_amount - detail.remaining_amount)} / {formatCurrency(detail.total_amount)}
-                                                </span>
+                                        <div className="p-6 space-y-5">
+                                            {/* Derived remaining amount — NEVER from stored field */}
+                                            <div>
+                                                <div className="flex justify-between text-sm mb-2">
+                                                    <span className="text-text-tertiary">İlerleme</span>
+                                                    <span className="text-white font-medium">
+                                                        {formatCurrency(detail.total_amount - detail.remaining_amount)} / {formatCurrency(detail.total_amount)}
+                                                    </span>
+                                                </div>
+                                                <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full bg-primary rounded-full"
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${Math.min(100, Math.round((1 - detail.remaining_amount / detail.total_amount) * 100))}%` }}
+                                                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-between text-xs text-text-tertiary mt-1">
+                                                    <span>Ödendi: {formatCurrency(detail.total_amount - detail.remaining_amount)}</span>
+                                                    <span className="text-warning">Kalan: {formatCurrency(detail.remaining_amount)}</span>
+                                                </div>
                                             </div>
-                                            <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                                                <motion.div
-                                                    className="h-full bg-primary rounded-full"
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${Math.min(100, Math.round((1 - detail.remaining_amount / detail.total_amount) * 100))}%` }}
-                                                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                                                />
-                                            </div>
-                                            <div className="flex justify-between text-xs text-text-tertiary mt-1">
-                                                <span>Ödendi: {formatCurrency(detail.total_amount - detail.remaining_amount)}</span>
-                                                <span className="text-warning">Kalan: {formatCurrency(detail.remaining_amount)}</span>
-                                            </div>
-                                        </div>
 
-                                        {/* Payment history */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className="text-sm font-medium text-white">Ödeme Geçmişi</h4>
-                                                <button
-                                                    onClick={() => setShowPaymentForm(true)}
-                                                    className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                    Ödeme Ekle
-                                                </button>
+                                            {/* Payment history */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="text-sm font-medium text-white">Ödeme Geçmişi</h4>
+                                                    <button
+                                                        onClick={() => setShowPaymentForm(true)}
+                                                        className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        Ödeme Ekle
+                                                    </button>
+                                                </div>
+                                                {detail.payments.length === 0 ? (
+                                                    <p className="text-xs text-text-tertiary text-center py-4">Henüz ödeme yok</p>
+                                                ) : (
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                        {detail.payments.map((p) => (
+                                                            <div key={p.id} className="flex justify-between text-sm p-2 bg-background-elevated rounded-lg">
+                                                                <span className="text-text-secondary">{new Date(p.occurred_at).toLocaleDateString('tr-TR')}</span>
+                                                                <span className="text-success font-medium">+{formatCurrency(p.amount)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {detail.payments.length === 0 ? (
-                                                <p className="text-xs text-text-tertiary text-center py-4">Henüz ödeme yok</p>
-                                            ) : (
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                    {detail.payments.map((p) => (
-                                                        <div key={p.id} className="flex justify-between text-sm p-2 bg-background-elevated rounded-lg">
-                                                            <span className="text-text-secondary">{new Date(p.occurred_at).toLocaleDateString('tr-TR')}</span>
-                                                            <span className="text-success font-medium">+{formatCurrency(p.amount)}</span>
-                                                        </div>
-                                                    ))}
+
+                                            {/* Actions */}
+                                            {!detail.is_closed && (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={async () => { await closeObligation(detail.id); setDetail(null) }}
+                                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-success/20 hover:bg-success/30 text-success border border-success/30 rounded-xl text-sm font-medium transition-all"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                        Kapat
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => { await deleteObligation(detail.id); setDetail(null) }}
+                                                        className="flex-1 py-2.5 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-sm transition-all"
+                                                    >
+                                                        Sil
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Actions */}
-                                        {!detail.is_closed && (
-                                            <div className="flex gap-3">
-                                                <button
-                                                    onClick={async () => { await closeObligation(detail.id); setDetail(null) }}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-success/20 hover:bg-success/30 text-success border border-success/30 rounded-xl text-sm font-medium transition-all"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                    Kapat
-                                                </button>
-                                                <button
-                                                    onClick={async () => { await deleteObligation(detail.id); setDetail(null) }}
-                                                    className="flex-1 py-2.5 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-sm transition-all"
-                                                >
-                                                    Sil
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            ) : null}
+                                    </>
+                                ) : null}
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
+                    </Portal>
                 )}
             </AnimatePresence>
 
-            {/* Payment Form for obligation */}
+            {/* Payment Form — also a Portal via TransactionForm */}
             <AnimatePresence>
                 {showPaymentForm && detail && (
                     <TransactionForm
@@ -340,7 +345,6 @@ export function ObligationSection() {
                         presetObligationId={detail.id}
                         onSuccess={async () => {
                             setShowPaymentForm(false)
-                            // Refresh detail to show updated remaining_amount
                             const refreshed = await getObligationDetail(detail.id)
                             setDetail(refreshed)
                         }}

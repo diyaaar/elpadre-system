@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Plus, Trash2, X, Tag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
+import { Portal } from '../../../components/Portal'
 
 const PRESET_COLORS = [
     '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444',
@@ -125,7 +126,7 @@ export function CategoryManager() {
                                 <AnimatePresence>
                                     {showTagForm === cat.id && (
                                         <motion.form
-                                            onSubmit={(e) => handleCreateTag(e, cat.id)}
+                                            onSubmit={(e: React.FormEvent<HTMLFormElement>) => handleCreateTag(e, cat.id)}
                                             initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                                             className="mt-3 flex gap-2 overflow-hidden"
                                         >
@@ -151,53 +152,55 @@ export function CategoryManager() {
             {/* Create Category Modal */}
             <AnimatePresence>
                 {showCatForm && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        onClick={(e) => e.target === e.currentTarget && setShowCatForm(false)}>
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.form onSubmit={handleCreateCategory}
-                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-sm bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                                <h2 className="text-base font-semibold text-white">Yeni Kategori</h2>
-                                <button type="button" onClick={() => setShowCatForm(false)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                {/* Type */}
-                                <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
-                                    {(['income', 'expense'] as const).map((t) => (
-                                        <button key={t} type="button" onClick={() => setActiveType(t)}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeType === t ? 'bg-primary/20 text-white border border-primary/30' : 'text-text-tertiary hover:text-white'}`}>
-                                            {t === 'income' ? 'Gelir' : 'Gider'}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div>
-                                    <label className="text-xs text-text-tertiary mb-1 block">İsim *</label>
-                                    <input value={catName} onChange={(e) => setCatName(e.target.value)} required placeholder="Kira, Market, Maaş..."
-                                        className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-text-tertiary mb-1.5 block">Renk</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {PRESET_COLORS.map((color) => (
-                                            <button key={color} type="button" onClick={() => setCatColor(color)}
-                                                className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${catColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-background-elevated scale-110' : ''}`}
-                                                style={{ backgroundColor: color }} />
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 pt-1">
-                                    <button type="button" onClick={() => setShowCatForm(false)} className="flex-1 py-2.5 bg-background-elevated text-text-secondary rounded-xl border border-white/5 text-sm">İptal</button>
-                                    <button type="submit" disabled={catSubmitting} className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-60">
-                                        {catSubmitting ? '...' : 'Kaydet'}
+                    <Portal>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && setShowCatForm(false)}>
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                            <motion.form onSubmit={handleCreateCategory}
+                                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                                className="relative w-full max-w-sm bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                                    <h2 className="text-base font-semibold text-white">Yeni Kategori</h2>
+                                    <button type="button" onClick={() => setShowCatForm(false)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
+                                        <X className="w-4 h-4" />
                                     </button>
                                 </div>
-                            </div>
-                        </motion.form>
-                    </motion.div>
+                                <div className="p-6 space-y-4">
+                                    {/* Type */}
+                                    <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
+                                        {(['income', 'expense'] as const).map((t) => (
+                                            <button key={t} type="button" onClick={() => setActiveType(t)}
+                                                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${activeType === t ? 'bg-primary/20 text-white border border-primary/30' : 'text-text-tertiary hover:text-white'}`}>
+                                                {t === 'income' ? 'Gelir' : 'Gider'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-text-tertiary mb-1 block">İsim *</label>
+                                        <input value={catName} onChange={(e) => setCatName(e.target.value)} required placeholder="Kira, Market, Maaş..."
+                                            className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-text-tertiary mb-1.5 block">Renk</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {PRESET_COLORS.map((color) => (
+                                                <button key={color} type="button" onClick={() => setCatColor(color)}
+                                                    className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${catColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-background-elevated scale-110' : ''}`}
+                                                    style={{ backgroundColor: color }} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 pt-1">
+                                        <button type="button" onClick={() => setShowCatForm(false)} className="flex-1 py-2.5 bg-background-elevated text-text-secondary rounded-xl border border-white/5 text-sm">İptal</button>
+                                        <button type="submit" disabled={catSubmitting} className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-60">
+                                            {catSubmitting ? '...' : 'Kaydet'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.form>
+                        </motion.div>
+                    </Portal>
                 )}
             </AnimatePresence>
         </div>
