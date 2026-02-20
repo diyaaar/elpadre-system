@@ -1,43 +1,86 @@
-import { Wallet } from 'lucide-react'
-import { motion } from 'framer-motion'
+// ============================================================
+// FINANCE PAGE — Main layout with tabbed sections
+// Replaces placeholder. Wired to FinanceContext.
+// ============================================================
+
+import { useState } from 'react'
+import { BarChart2, ArrowLeftRight, CreditCard, RefreshCcw, FolderOpen, AlertCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useFinance } from '../../contexts/FinanceContext'
+import { FinanceDashboard } from './components/FinanceDashboard'
+import { TransactionSection } from './components/TransactionSection'
+import { ObligationSection } from './components/ObligationSection'
+import { RecurringSection } from './components/RecurringSection'
+import { CategoryManager } from './components/CategoryManager'
+
+type FinanceTab = 'dashboard' | 'transactions' | 'obligations' | 'recurring' | 'categories'
+
+const TABS: { id: FinanceTab; label: string; Icon: React.ElementType }[] = [
+    { id: 'dashboard', label: 'Özet', Icon: BarChart2 },
+    { id: 'transactions', label: 'İşlemler', Icon: ArrowLeftRight },
+    { id: 'obligations', label: 'Borç & Alacak', Icon: CreditCard },
+    { id: 'recurring', label: 'Tekrarlayan', Icon: RefreshCcw },
+    { id: 'categories', label: 'Kategoriler', Icon: FolderOpen },
+]
 
 export function FinancePage() {
+    const { error, loading } = useFinance()
+    const [activeTab, setActiveTab] = useState<FinanceTab>('dashboard')
+
     return (
-        <div className="min-h-[400px] flex flex-col items-center justify-center p-12 text-center">
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-8 shadow-2xl shadow-primary/20 border border-primary/20"
-            >
-                <Wallet className="w-12 h-12 text-primary" />
-            </motion.div>
+        <div className="p-6 space-y-6">
+            {/* Error Banner */}
+            {error && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm"
+                >
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{error}</span>
+                </motion.div>
+            )}
 
-            <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-            >
-                <h2 className="text-3xl font-bold text-white mb-4 tracking-tight">Finans Modülü</h2>
-                <p className="text-text-tertiary max-w-md mx-auto text-lg leading-relaxed">
-                    Gelir-gider takibi, bütçe yönetimi ve finansal analiz araçları çok yakında burada olacak.
-                </p>
+            {/* Tab Navigation */}
+            <div className="flex overflow-x-auto gap-1 p-1 bg-background-elevated/50 backdrop-blur-sm border border-white/5 rounded-2xl">
+                {TABS.map(({ id, label, Icon }) => (
+                    <button
+                        key={id}
+                        onClick={() => setActiveTab(id)}
+                        className={`
+              relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0
+              ${activeTab === id ? 'text-white' : 'text-text-tertiary hover:text-text-primary'}
+            `}
+                    >
+                        {activeTab === id && (
+                            <motion.div
+                                layoutId="financeTabBg"
+                                className="absolute inset-0 bg-primary/20 border border-primary/20 rounded-xl"
+                                transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+                            />
+                        )}
+                        <Icon className="w-4 h-4 relative z-10" />
+                        <span className="relative z-10 hidden sm:inline">{label}</span>
+                    </button>
+                ))}
+            </div>
 
-                <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto opacity-50">
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="text-sm font-medium text-text-tertiary mb-1">Toplam Bakiye</div>
-                        <div className="text-xl font-bold text-white">₺0,00</div>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="text-sm font-medium text-text-tertiary mb-1">Aylık Gelir</div>
-                        <div className="text-xl font-bold text-success">₺0,00</div>
-                    </div>
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="text-sm font-medium text-text-tertiary mb-1">Aylık Gider</div>
-                        <div className="text-xl font-bold text-danger">₺0,00</div>
-                    </div>
-                </div>
-            </motion.div>
+            {/* Tab Content */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {activeTab === 'dashboard' && <FinanceDashboard />}
+                    {activeTab === 'transactions' && <TransactionSection />}
+                    {activeTab === 'obligations' && <ObligationSection />}
+                    {activeTab === 'recurring' && <RecurringSection />}
+                    {activeTab === 'categories' && <CategoryManager />}
+                </motion.div>
+            </AnimatePresence>
         </div>
     )
 }

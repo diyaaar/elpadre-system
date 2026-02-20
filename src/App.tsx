@@ -7,6 +7,7 @@ import { AttachmentsProvider } from './contexts/AttachmentsContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { UndoSnackbarProvider } from './contexts/UndoSnackbarContext'
 import { CalendarProvider } from './contexts/CalendarContext'
+import { FinanceProvider } from './contexts/FinanceContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
@@ -38,9 +39,11 @@ function App() {
                         <AttachmentsProvider>
                           <TasksProvider>
                             <CalendarProvider>
-                              <Layout>
-                                <HomePage />
-                              </Layout>
+                              <FinanceProvider>
+                                <Layout>
+                                  <HomePage />
+                                </Layout>
+                              </FinanceProvider>
                             </CalendarProvider>
                           </TasksProvider>
                         </AttachmentsProvider>
@@ -59,4 +62,3 @@ function App() {
 }
 
 export default App
-

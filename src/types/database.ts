@@ -270,6 +270,213 @@ export interface Database {
           created_at?: string
         }
       }
+      finance_categories: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'income' | 'expense'
+          name: string
+          color: string
+          icon: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'income' | 'expense'
+          name: string
+          color?: string
+          icon?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'income' | 'expense'
+          name?: string
+          color?: string
+          icon?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      finance_tags: {
+        Row: {
+          id: string
+          user_id: string
+          category_id: string | null
+          name: string
+          color: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          category_id?: string | null
+          name: string
+          color?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          category_id?: string | null
+          name?: string
+          color?: string
+        }
+      }
+      finance_obligations: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'payable' | 'receivable'
+          total_amount: number
+          currency: string
+          description: string
+          counterparty: string | null
+          start_date: string
+          deadline: string | null
+          reminder_days: number
+          is_closed: boolean
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'payable' | 'receivable'
+          total_amount: number
+          currency?: string
+          description: string
+          counterparty?: string | null
+          start_date?: string
+          deadline?: string | null
+          reminder_days?: number
+          is_closed?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'payable' | 'receivable'
+          total_amount?: number
+          currency?: string
+          description?: string
+          counterparty?: string | null
+          start_date?: string
+          deadline?: string | null
+          reminder_days?: number
+          is_closed?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      finance_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'income' | 'expense'
+          amount: number
+          currency: string
+          category_id: string | null
+          tag_id: string | null
+          obligation_id: string | null
+          occurred_at: string
+          note: string | null
+          receipt_path: string | null
+          is_archived: boolean
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'income' | 'expense'
+          amount: number
+          currency?: string
+          category_id?: string | null
+          tag_id?: string | null
+          obligation_id?: string | null
+          occurred_at?: string
+          note?: string | null
+          receipt_path?: string | null
+          is_archived?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'income' | 'expense'
+          amount?: number
+          currency?: string
+          category_id?: string | null
+          tag_id?: string | null
+          obligation_id?: string | null
+          occurred_at?: string
+          note?: string | null
+          receipt_path?: string | null
+          is_archived?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
+      finance_recurring_templates: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'income' | 'expense'
+          amount: number
+          currency: string
+          category_id: string | null
+          tag_id: string | null
+          name: string
+          note: string | null
+          frequency: 'monthly' | 'yearly'
+          next_occurrence: string
+          is_active: boolean
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'income' | 'expense'
+          amount: number
+          currency?: string
+          category_id?: string | null
+          tag_id?: string | null
+          name: string
+          note?: string | null
+          frequency: 'monthly' | 'yearly'
+          next_occurrence: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'income' | 'expense'
+          amount?: number
+          currency?: string
+          category_id?: string | null
+          tag_id?: string | null
+          name?: string
+          note?: string | null
+          frequency?: 'monthly' | 'yearly'
+          next_occurrence?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string | null
+        }
+      }
     }
   }
 }
