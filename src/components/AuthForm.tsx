@@ -20,23 +20,23 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
 
     // Basic validation
     if (!email || !password) {
-      setError('Please fill in all fields')
+      setError('Lütfen tüm alanları doldurun')
       setLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('Şifre en az 6 karakter olmalıdır')
       setLoading(false)
       return
     }
 
     const { error } = await onSubmit(email, password)
-    
+
     if (error) {
-      setError(error.message || 'An error occurred')
+      setError(error.message || 'Bir hata oluştu')
     }
-    
+
     setLoading(false)
   }
 
@@ -44,12 +44,12 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6 w-full max-w-md">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-text-primary mb-2">
-          {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+          {mode === 'login' ? 'Tekrar Hoş Geldiniz' : 'Hesap Oluştur'}
         </h1>
         <p className="text-text-tertiary">
           {mode === 'login'
-            ? 'Sign in to continue to your todo list'
-            : 'Start organizing your tasks with AI'}
+            ? 'Görev listenize devam etmek için giriş yapın'
+            : 'Yapay zeka ile görevlerinizi organize etmeye başlayın'}
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
       <div className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-            Email
+            E-posta
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-5 h-5" />
@@ -81,7 +81,7 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
-            Password
+            Şifre
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-tertiary w-5 h-5" />
@@ -107,34 +107,34 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
         {loading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            {mode === 'login' ? 'Signing in...' : 'Creating account...'}
+            {mode === 'login' ? 'Giriş yapılıyor...' : 'Hesap oluşturuluyor...'}
           </>
         ) : (
-          mode === 'login' ? 'Sign In' : 'Sign Up'
+          mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'
         )}
       </button>
 
       <div className="text-center text-text-tertiary">
         {mode === 'login' ? (
           <p>
-            Don't have an account?{' '}
+            Hesabınız yok mu?{' '}
             <button
               type="button"
               onClick={onToggleMode}
               className="text-primary hover:text-primary-light font-medium"
             >
-              Sign up
+              Kayıt ol
             </button>
           </p>
         ) : (
           <p>
-            Already have an account?{' '}
+            Zaten hesabınız var mı?{' '}
             <button
               type="button"
               onClick={onToggleMode}
               className="text-primary hover:text-primary-light font-medium"
             >
-              Sign in
+              Giriş yap
             </button>
           </p>
         )}
@@ -142,4 +142,3 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
     </form>
   )
 }
-

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LogOut, User, Camera, Sparkles } from 'lucide-react'
+import { LogOut, User, Camera } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { AvatarUploadModal } from './AvatarUploadModal'
@@ -28,14 +28,9 @@ export function Header() {
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo Section */}
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-dark to-primary shadow-lg shadow-primary/20">
-                <Sparkles className="w-5 h-5 text-white" />
-                <div className="absolute -inset-1 bg-primary/30 blur-lg opacity-40 rounded-full" />
-              </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">
-                  El Padre
-                  <span className="text-primary-light ml-1">✦</span>
+                  Modern Zihin Haritası
                 </h1>
                 <p className="text-[10px] text-text-tertiary font-medium tracking-wider uppercase hidden sm:block">
                   Akıllı Görev Yönetimi
