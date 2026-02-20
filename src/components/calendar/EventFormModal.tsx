@@ -154,7 +154,7 @@ export function EventFormModal({
                 endPayload = new Date(endStr).toISOString()
             }
 
-            const payload: Omit<CalendarEvent, 'id'> = {
+            const payload: Omit<CalendarEvent, 'id'> & { timeZone?: string } = {
                 summary: title.trim(),
                 start: startPayload,
                 end: endPayload,
@@ -163,6 +163,7 @@ export function EventFormModal({
                 colorId: colorId || undefined,
                 calendarId: calendarId || undefined,
                 allDay,
+                timeZone: allDay ? undefined : 'Europe/Istanbul',
             }
 
             if (isEditing && event) {
