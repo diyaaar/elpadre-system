@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { Plus, X, Check, CreditCard, HandIcon, Pencil, Undo } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
-import { formatCurrency } from '../types/finance.types'
+import { formatCurrency, formatInputAmountTl } from '../types/finance.types'
 import type { ObligationWithDerived } from '../types/finance.types'
 import { TransactionForm } from './TransactionForm'
 import { Portal } from '../../../components/Portal'
@@ -233,7 +233,7 @@ export function ObligationSection() {
                                         <label className="text-xs text-text-tertiary mb-1 block">Toplam Tutar (₺) *</label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">₺</span>
-                                            <input type="number" step="0.01" min="0.01" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} required
+                                            <input type="text" inputMode="decimal" value={formAmount} onChange={(e) => setFormAmount(formatInputAmountTl(e.target.value))} required placeholder="0,00"
                                                 className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                                         </div>
                                     </div>

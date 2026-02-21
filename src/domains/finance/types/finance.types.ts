@@ -53,6 +53,7 @@ export interface FinanceTransaction {
     user_id: string
     type: FinanceTransactionType
     amount: number // kuruş — BIGINT. NEVER float.
+    amount_try: number // kuruş — TL equivalent at the time of transaction
     currency: string
     category_id: string | null
     tag_id: string | null
@@ -188,9 +189,23 @@ export interface RecurringTemplateFormInput {
 
 /** Convert TL string from UI input to integer kuruş */
 export function tlToKurus(tl: string): number {
-    const parsed = parseFloat(tl.replace(',', '.'))
+    const raw = tl.replace(/\./g, '').replace(',', '.')
+    const parsed = parseFloat(raw)
     if (isNaN(parsed)) return 0
     return Math.round(parsed * 100)
+}
+
+/** Format raw user input into smart decimal string with thousands separator */
+export function formatInputAmountTl(value: string): string {
+    const raw = value.replace(/[^0-9.,]/g, '')
+    const parts = raw.replace(/\./g, '').split(',')
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+    if (parts.length > 1) {
+        return `${intPart},${parts[1].slice(0, 2)}`
+    }
+
+    return intPart
 }
 
 /** Convert integer kuruş to display string in TL */

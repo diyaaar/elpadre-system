@@ -12,6 +12,7 @@ import type {
     FinanceObligation,
     ObligationWithDerived,
     RecurringTemplate,
+    RecurringFrequency,
     TransactionFilters,
     DashboardStats,
     DashboardPeriodConfig,
@@ -217,6 +218,29 @@ export async function createTransaction(
         throw new Error('amount must be a positive integer (kuruş)')
     }
 
+    // Calculate amount_try
+    let amount_try = input.amount;
+    const isForeign = input.currency === 'USD' || input.currency === 'EUR';
+
+    if (isForeign) {
+        try {
+            // We can optionally use an internal helper or fetch directly from our own API wrapper / the external API.
+            // Using the public free API directly to prevent Vercel route recursive timeout.
+            const res = await fetch('https://api.frankfurter.app/latest?from=TRY&to=USD,EUR', { signal: AbortSignal.timeout(4000) })
+            if (res.ok) {
+                const data = await res.json()
+                const rate = input.currency === 'USD' ? data.rates.USD : data.rates.EUR
+                if (rate) {
+                    // 1 / rate = TRY Value. amount (kuruş) * (1 / rate)
+                    amount_try = Math.round(input.amount * (1 / rate))
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch exchange rate during createTransaction", e)
+            // Fallback to storing original amount if rate API offline, better than failing the transaction creation
+        }
+    }
+
     const supabase = getSupabase()
     const { data, error } = await supabase
         .from('finance_transactions')
@@ -224,6 +248,7 @@ export async function createTransaction(
             user_id: userId,
             type: input.type,
             amount: input.amount,
+            amount_try: amount_try,
             currency: input.currency || 'TRY',
             category_id: input.category_id || null,
             tag_id: input.tag_id || null,
@@ -250,10 +275,42 @@ export async function updateTransaction(
         throw new Error('amount must be a positive integer (kuruş)')
     }
 
+    const payload: any = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+    }
+
+    // Recalculate amount_try if amount or currency is being updated
+    if (updates.amount !== undefined || updates.currency !== undefined) {
+        // Technically we should fetch the original tx to know both if one is missing,
+        // but typically the UI sends both amount and currency during an update.
+        // Assuming we have enough info:
+        if (updates.currency && updates.amount !== undefined) {
+            const isForeign = updates.currency === 'USD' || updates.currency === 'EUR';
+            let amount_try = updates.amount;
+
+            if (isForeign) {
+                try {
+                    const res = await fetch('https://api.frankfurter.app/latest?from=TRY&to=USD,EUR', { signal: AbortSignal.timeout(4000) })
+                    if (res.ok) {
+                        const data = await res.json()
+                        const rate = updates.currency === 'USD' ? data.rates.USD : data.rates.EUR
+                        if (rate) {
+                            amount_try = Math.round(updates.amount * (1 / rate))
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch exchange rate during update", e)
+                }
+            }
+            payload.amount_try = amount_try;
+        }
+    }
+
     const supabase = getSupabase()
     const { data, error } = await supabase
         .from('finance_transactions')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', id)
         .eq('user_id', userId)
         .select()
@@ -325,7 +382,7 @@ export async function getDashboardStats(
 
     const { data, error } = await supabase
         .from('finance_transactions')
-        .select('type, amount, category_id')
+        .select('type, amount, amount_try, currency, category_id')
         .eq('user_id', userId)
         .eq('is_archived', false)
         .gte('occurred_at', dateFrom)
@@ -335,26 +392,54 @@ export async function getDashboardStats(
 
     const txns = data || []
 
-    // Aggregate in JS (Supabase JS v2 doesn't expose GROUP BY)
+    // Fetch live currency rates for remaining balance calculation
+    let liveUsdToTry = 1;
+    let liveEurToTry = 1;
+    try {
+        const liveRes = await fetch('https://api.frankfurter.app/latest?from=TRY&to=USD,EUR', { signal: AbortSignal.timeout(4000) });
+        if (liveRes.ok) {
+            const dr = await liveRes.json()
+            if (dr.rates?.USD) liveUsdToTry = 1 / dr.rates.USD;
+            if (dr.rates?.EUR) liveEurToTry = 1 / dr.rates.EUR;
+        }
+    } catch (e) {
+        console.warn("Could not fetch live rates for dashboard, falling back to 1:1");
+    }
+
+    // Amount_try is used for all stats except remaining foreign balance
     const totalIncomeKurus = txns
         .filter((t) => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + (t.amount_try || t.amount), 0)
 
     const totalExpenseKurus = txns
         .filter((t) => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0)
+        .reduce((sum, t) => sum + (t.amount_try || t.amount), 0)
 
-    // Category breakdown for expenses
+    // Calculate net by summing remaining individual currency wallets to live rates
+    let remainingTRY = 0;
+    let remainingUSD = 0; // kuruş
+    let remainingEUR = 0; // kuruş
+
+    txns.forEach(t => {
+        const amt = t.type === 'income' ? t.amount : -t.amount;
+        if (t.currency === 'USD') remainingUSD += amt;
+        else if (t.currency === 'EUR') remainingEUR += amt;
+        else remainingTRY += amt;
+    })
+
+    // Dynamic recalculation of foreign valets
+    const netKurus = remainingTRY + Math.round(remainingUSD * liveUsdToTry) + Math.round(remainingEUR * liveEurToTry)
+
     const catMap = new Map<string, { totalKurus: number; count: number }>()
-    txns
-        .filter((t) => t.type === 'expense' && t.category_id)
-        .forEach((t) => {
-            const existing = catMap.get(t.category_id!) || { totalKurus: 0, count: 0 }
-            catMap.set(t.category_id!, {
-                totalKurus: existing.totalKurus + t.amount,
-                count: existing.count + 1,
+    txns.forEach((t) => {
+        if (t.type === 'expense' && t.category_id) {
+            const current = catMap.get(t.category_id) || { totalKurus: 0, count: 0 }
+            catMap.set(t.category_id, {
+                totalKurus: current.totalKurus + (t.amount_try || t.amount),
+                count: current.count + 1,
             })
-        })
+        }
+    })
 
     const categoryBreakdown: CategoryStat[] = []
     catMap.forEach((stat, catId) => {
@@ -375,7 +460,7 @@ export async function getDashboardStats(
     return {
         totalIncomeKurus,
         totalExpenseKurus,
-        netKurus: totalIncomeKurus - totalExpenseKurus,
+        netKurus,
         categoryBreakdown,
         top5Expenses,
         periodLabel,
@@ -561,7 +646,7 @@ export async function createRecurringTemplate(
         tag_id?: string
         name: string
         note?: string
-        frequency: 'monthly' | 'yearly'
+        frequency: RecurringFrequency
         next_occurrence: string // ISO date
     }
 ): Promise<RecurringTemplate> {
@@ -571,7 +656,7 @@ export async function createRecurringTemplate(
 
     const supabase = getSupabase()
     const { data, error } = await supabase
-        .from('finance_recurring_templates')
+        .from('recurring_templates')
         .insert({
             user_id: userId,
             type: input.type,
@@ -579,13 +664,45 @@ export async function createRecurringTemplate(
             currency: input.currency || 'TRY',
             category_id: input.category_id || null,
             tag_id: input.tag_id || null,
-            name: input.name.trim(),
+            name: input.name,
             note: input.note || null,
             frequency: input.frequency,
             next_occurrence: input.next_occurrence,
             is_active: true,
             updated_at: new Date().toISOString(),
         })
+        .select()
+        .single()
+
+    if (error) throw error
+    return data
+}
+
+export async function updateRecurringTemplate(
+    userId: string,
+    id: string,
+    updates: Partial<{
+        type: 'income' | 'expense'
+        amount: number // kuruş
+        currency: string
+        category_id: string | null
+        tag_id: string | null
+        name: string
+        note: string | null
+        frequency: RecurringFrequency
+        next_occurrence: string
+        is_active: boolean
+    }>
+): Promise<RecurringTemplate> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+        .from('recurring_templates')
+        .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
         .select()
         .single()
 

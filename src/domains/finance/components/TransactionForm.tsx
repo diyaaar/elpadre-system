@@ -8,7 +8,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { X, TrendingUp, TrendingDown, Upload, Paperclip, Camera, Sparkles, Loader2, AlertTriangle, Plus, ExternalLink, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
-import type { FinanceTransaction } from '../types/finance.types'
+import { FinanceTransaction, formatInputAmountTl } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
 import { getReceiptUrl } from '../../../lib/financeStorage'
 import { ReceiptViewer } from './ReceiptViewer'
@@ -368,13 +368,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                         inputMode="decimal"
                                         value={amountTl}
                                         onChange={(e) => {
-                                            const raw = e.target.value.replace(/[^0-9.,]/g, '')
-                                            const parts = raw.replace(/\./g, '').split(',')
-                                            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-                                            const formatted = parts.length > 1
-                                                ? `${intPart},${parts[1].slice(0, 2)}`
-                                                : intPart
-                                            setAmountTl(formatted)
+                                            setAmountTl(formatInputAmountTl(e.target.value))
                                         }}
                                         placeholder="0,00"
                                         required

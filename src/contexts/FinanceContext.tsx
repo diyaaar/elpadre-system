@@ -22,6 +22,7 @@ import type {
     FinanceObligation,
     ObligationWithDerived,
     RecurringTemplate,
+    RecurringFrequency,
     TransactionFilters,
     DashboardStats,
     DashboardPeriodConfig,
@@ -107,9 +108,21 @@ interface FinanceContextType {
         tag_id?: string
         name: string
         note?: string
-        frequency: 'monthly' | 'yearly'
+        frequency: RecurringFrequency
         next_occurrence: string
     }) => Promise<RecurringTemplate | null>
+    updateRecurringTemplate: (id: string, updates: Partial<{
+        type: 'income' | 'expense'
+        amountTl: string
+        currency: string
+        category_id: string | null
+        tag_id: string | null
+        name: string
+        note: string | null
+        frequency: RecurringFrequency
+        next_occurrence: string
+        is_active: boolean
+    }>) => Promise<RecurringTemplate | null>
     generateTransactionFromTemplate: (templateId: string) => Promise<FinanceTransaction | null>
     deleteRecurringTemplate: (id: string) => Promise<void>
 
@@ -561,7 +574,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         tag_id?: string
         name: string
         note?: string
-        frequency: 'monthly' | 'yearly'
+        frequency: RecurringFrequency
         next_occurrence: string
     }): Promise<RecurringTemplate | null> => {
         if (!user) return null
@@ -580,6 +593,48 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             return tmpl
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Şablon oluşturulamadı'
+            showToast(msg, 'error')
+            return null
+        }
+    }, [user, showToast])
+
+    const updateRecurringTemplate = useCallback(async (
+        id: string,
+        updates: Partial<{
+            type: 'income' | 'expense'
+            amountTl: string
+            currency: string
+            category_id: string | null
+            tag_id: string | null
+            name: string
+            note: string | null
+            frequency: RecurringFrequency
+            next_occurrence: string
+            is_active: boolean
+        }>
+    ): Promise<RecurringTemplate | null> => {
+        if (!user) return null
+        try {
+            const payload: any = { ...updates }
+
+            // Convert amountTl string to kuruş integer if provided
+            if (updates.amountTl) {
+                const amountKurus = tlToKurus(updates.amountTl)
+                if (amountKurus <= 0) {
+                    showToast('Geçerli bir tutar girin', 'error')
+                    return null
+                }
+                payload.amount = amountKurus
+                delete payload.amountTl // Do not send UI string representation to DB
+            }
+
+            const updated = await FinanceService.updateRecurringTemplate(user.id, id, payload)
+
+            setRecurringTemplates((prev) => prev.map(t => t.id === id ? updated : t))
+            showToast('Tekrarlayan şablon güncellendi', 'success', 2000)
+            return updated
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Şablon güncellenemedi'
             showToast(msg, 'error')
             return null
         }
@@ -648,6 +703,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         deleteObligation,
         getObligationDetail,
         createRecurringTemplate,
+        updateRecurringTemplate,
         generateTransactionFromTemplate,
         deleteRecurringTemplate,
         getTagsForCategory,
@@ -659,7 +715,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         createTag, deleteTag,
         createTransaction, updateTransaction, updateTransactionWithReceipt, archiveTransaction, deleteTransaction,
         createObligation, updateObligation, closeObligation, reopenObligation, deleteObligation, getObligationDetail,
-        createRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate,
+        createRecurringTemplate, updateRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate,
         getTagsForCategory,
     ])
 

@@ -4,18 +4,19 @@
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, Play, Trash2, X, RefreshCcw } from 'lucide-react'
+import { Plus, Play, Trash2, X, RefreshCcw, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
-import { formatCurrency } from '../types/finance.types'
+import { formatCurrency, formatInputAmountTl, kurusToTl } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
 
 export function RecurringSection() {
-    const { recurringTemplates, categories, createRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate } = useFinance()
+    const { recurringTemplates, categories, createRecurringTemplate, updateRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate } = useFinance()
 
     const [showForm, setShowForm] = useState(false)
     const [generatingId, setGeneratingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
 
     // Form state
     const [formType, setFormType] = useState<'income' | 'expense'>('expense')
@@ -30,6 +31,17 @@ export function RecurringSection() {
     const isToday = (dateStr: string) => dateStr === today
     const isPast = (dateStr: string) => dateStr < today
     const filteredCategories = categories.filter((c) => c.type === formType)
+
+    const handleEdit = (tmpl: any) => {
+        setEditingTemplateId(tmpl.id)
+        setFormType(tmpl.type)
+        setFormName(tmpl.name)
+        setFormAmount(kurusToTl(tmpl.amount)) // Use kurusToTl to populate input correctly
+        setFormCategoryId(tmpl.category_id || '')
+        setFormFrequency(tmpl.frequency)
+        setFormNextOccurrence(tmpl.next_occurrence)
+        setShowForm(true)
+    }
 
     const handleGenerate = async (templateId: string) => {
         setGeneratingId(templateId)
@@ -47,20 +59,35 @@ export function RecurringSection() {
         e.preventDefault()
         if (!formName || !formAmount) return
         setSubmitting(true)
-        const result = await createRecurringTemplate({
-            type: formType,
-            amountTl: formAmount,
-            category_id: formCategoryId || undefined,
-            name: formName,
-            frequency: formFrequency,
-            next_occurrence: formNextOccurrence,
-        })
+
+        let result;
+        if (editingTemplateId) {
+            result = await updateRecurringTemplate(editingTemplateId, {
+                type: formType,
+                amountTl: formAmount,
+                category_id: formCategoryId || null,
+                name: formName,
+                frequency: formFrequency,
+                next_occurrence: formNextOccurrence,
+            })
+        } else {
+            result = await createRecurringTemplate({
+                type: formType,
+                amountTl: formAmount,
+                category_id: formCategoryId || undefined,
+                name: formName,
+                frequency: formFrequency,
+                next_occurrence: formNextOccurrence,
+            })
+        }
+
         setSubmitting(false)
         if (result) {
             setShowForm(false)
             setFormName('')
             setFormAmount('')
             setFormCategoryId('')
+            setEditingTemplateId(null)
         }
     }
 
@@ -69,7 +96,18 @@ export function RecurringSection() {
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">Tekrarlayan İşlemler</h3>
                 <button
-                    onClick={() => setShowForm(true)}
+                    onClick={() => {
+                        setEditingTemplateId(null)
+                        setFormName('')
+                        setFormAmount('')
+                        setFormCategoryId('')
+                        setFormType('expense')
+                        const d = new Date()
+                        // Ensure we always default to the exact local YYYY-MM-DD string safely
+                        d.setDate(d.getDate() + 1)
+                        setFormNextOccurrence(d.toISOString().slice(0, 10))
+                        setShowForm(true)
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 transition-all text-sm font-medium"
                 >
                     <Plus className="w-4 h-4" />
@@ -131,6 +169,12 @@ export function RecurringSection() {
                                         {generatingId === tmpl.id ? '...' : 'Oluştur'}
                                     </button>
                                     <button
+                                        onClick={() => handleEdit(tmpl)}
+                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
                                         onClick={() => handleDelete(tmpl.id)}
                                         disabled={deletingId === tmpl.id}
                                         className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
@@ -160,7 +204,7 @@ export function RecurringSection() {
                                 className="relative w-full max-w-md bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
                             >
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                                    <h2 className="text-lg font-semibold text-white">Yeni Tekrarlayan Şablon</h2>
+                                    <h2 className="text-lg font-semibold text-white">{editingTemplateId ? 'Şablon Düzenle' : 'Yeni Tekrarlayan Şablon'}</h2>
                                     <button type="button" onClick={() => setShowForm(false)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
                                         <X className="w-4 h-4" />
                                     </button>
@@ -186,7 +230,7 @@ export function RecurringSection() {
                                         <label className="text-xs text-text-tertiary mb-1 block">Tutar (₺) *</label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">₺</span>
-                                            <input type="number" step="0.01" min="0.01" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} required
+                                            <input type="text" inputMode="decimal" placeholder="0,00" value={formAmount} onChange={(e) => setFormAmount(formatInputAmountTl(e.target.value))} required
                                                 className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
                                         </div>
                                     </div>
