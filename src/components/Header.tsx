@@ -81,9 +81,6 @@ export function Header() {
                 <h1 className="text-xl font-bold tracking-tight text-white">
                   Yönetim Sistemi
                 </h1>
-                <p className="text-[10px] text-text-tertiary font-medium tracking-wider uppercase hidden sm:block">
-                  by Ali Diyar DURAN
-                </p>
               </div>
             </div>
 
