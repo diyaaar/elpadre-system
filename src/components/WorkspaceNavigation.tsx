@@ -21,6 +21,24 @@ export function WorkspaceNavigation() {
   const [contextMenu, setContextMenu] = useState<{ workspaceId: string; x: number; y: number } | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  // Auto-scroll when active workspace changes
+  useEffect(() => {
+    if (!scrollContainerRef.current || !currentWorkspaceId) return
+
+    // Slight delay to ensure DOM is updated
+    const timer = setTimeout(() => {
+      if (!scrollContainerRef.current) return
+      const activeElement = scrollContainerRef.current.querySelector(
+        `button[data-workspace-id="${CSS.escape(currentWorkspaceId)}"]`
+      )
+      if (activeElement) {
+        activeElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+      }
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [currentWorkspaceId])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -133,6 +151,7 @@ export function WorkspaceNavigation() {
                   return (
                     <motion.button
                       key={workspace.id}
+                      data-workspace-id={workspace.id}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
