@@ -4,12 +4,11 @@
 // AI Receipt Auto-Fill: gpt-4o-mini via /api/finance/analyze-receipt
 // ============================================================
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { X, TrendingUp, TrendingDown, Upload, Paperclip, Camera, Sparkles, Loader2, AlertTriangle, Plus, ExternalLink, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import type { FinanceTransaction } from '../types/finance.types'
-import { kurusToTl } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
 import { getReceiptUrl } from '../../../lib/financeStorage'
 
@@ -44,16 +43,18 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
     // Pre-populate from editingTransaction if in edit mode
     const initType = editingTransaction?.type ?? presetType ?? 'expense'
-    const initAmountTl = editingTransaction ? kurusToTl(editingTransaction.amount) : ''
+    const initAmountTl = editingTransaction ? (editingTransaction.amount / 100).toFixed(2) : ''
     const initCategoryId = editingTransaction?.category_id ?? ''
     const initTagId = editingTransaction?.tag_id ?? ''
     const initObligationId = editingTransaction?.obligation_id ?? presetObligationId ?? ''
-    const initOccurredAt = editingTransaction
+    const initDatetimeLocal = editingTransaction
         ? (() => {
             const d = new Date(editingTransaction.occurred_at)
             return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
         })()
         : localDatetime
+    const initDateStr = initDatetimeLocal.slice(0, 10)
+    const initTimeStr = initDatetimeLocal.slice(11, 16)
     const initNote = editingTransaction?.note ?? ''
 
     const [type, setType] = useState<'income' | 'expense'>(initType)
@@ -61,7 +62,8 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
     const [categoryId, setCategoryId] = useState(initCategoryId)
     const [tagId, setTagId] = useState(initTagId)
     const [obligationId, setObligationId] = useState(initObligationId)
-    const [occurredAt, setOccurredAt] = useState(initOccurredAt)
+    const [dateStr, setDateStr] = useState(initDateStr)   // YYYY-MM-DD
+    const [timeStr, setTimeStr] = useState(initTimeStr)   // HH:mm
     const [note, setNote] = useState(initNote)
 
     // Receipt state
@@ -79,6 +81,13 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
     const fileInputRef = useRef<HTMLInputElement>(null)
     const cameraInputRef = useRef<HTMLInputElement>(null)
+    const timeInputRef = useRef<HTMLInputElement>(null)
+
+    // Combine date+time into ISO string for submission
+    const buildOccurredAt = useCallback(() => {
+        const combined = `${dateStr}T${timeStr || '00:00'}:00`
+        return new Date(combined).toISOString()
+    }, [dateStr, timeStr])
 
     const filteredCategories = categories.filter((c) => c.type === type)
     const availableTags = categoryId ? getTagsForCategory(categoryId) : []
@@ -158,11 +167,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
             setNote(result.note)
 
             if (result.date) {
-                const dateObj = new Date(`${result.date}T12:00:00`)
-                const localDt = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000)
-                    .toISOString()
-                    .slice(0, 16)
-                setOccurredAt(localDt)
+                setDateStr(result.date) // already YYYY-MM-DD
             }
 
             if (result.matched_category_id) {
@@ -203,16 +208,21 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
         e.preventDefault()
         setError(null)
 
-        if (!amountTl || parseFloat(amountTl.replace(',', '.')) <= 0) {
+        // Parse amount — strip thousand-separator dots, replace comma with dot
+        const rawAmount = amountTl.replace(/\./g, '').replace(',', '.')
+        if (!rawAmount || parseFloat(rawAmount) <= 0) {
             setError('Geçerli bir tutar girin')
             return
         }
+
+        // Build occurred_at from split date+time state
+        const occurredAtIso = buildOccurredAt()
 
         setSubmitting(true)
         try {
             if (isEdit && editingTransaction) {
                 // ── EDIT MODE ──
-                const amountKurus = Math.round(parseFloat(amountTl.replace(',', '.')) * 100)
+                const amountKurus = Math.round(parseFloat(rawAmount) * 100)
                 await updateTransactionWithReceipt(
                     editingTransaction.id,
                     {
@@ -221,7 +231,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                         category_id: categoryId || null,
                         tag_id: tagId || null,
                         obligation_id: obligationId || null,
-                        occurred_at: new Date(occurredAt).toISOString(),
+                        occurred_at: occurredAtIso,
                         note: note.trim() || null,
                     },
                     {
@@ -235,11 +245,11 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                 // ── CREATE MODE ──
                 const txn = await createTransaction({
                     type,
-                    amountTl,
+                    amountTl: rawAmount,
                     category_id: categoryId || undefined,
                     tag_id: tagId || undefined,
                     obligation_id: obligationId || undefined,
-                    occurred_at: new Date(occurredAt).toISOString(),
+                    occurred_at: occurredAtIso,
                     note: note.trim() || undefined,
                     receiptFile,
                 })
@@ -314,11 +324,20 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary font-medium">₺</span>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     value={amountTl}
-                                    onChange={(e) => setAmountTl(e.target.value)}
+                                    onChange={(e) => {
+                                        // Strip existing dots (thousand separators), allow comma/dot as decimal
+                                        const raw = e.target.value.replace(/[^0-9.,]/g, '')
+                                        // Format: separate integer part with dots every 3 digits
+                                        const parts = raw.replace(/\./g, '').split(',')
+                                        const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                                        const formatted = parts.length > 1
+                                            ? `${intPart},${parts[1].slice(0, 2)}`
+                                            : intPart
+                                        setAmountTl(formatted)
+                                    }}
                                     placeholder="0,00"
                                     required
                                     className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all text-lg font-semibold"
@@ -407,16 +426,30 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                             )}
                         </AnimatePresence>
 
-                        {/* Date */}
+                        {/* Date + Time — split inputs so date picker closes on single-click */}
                         <div>
                             <label className="block text-xs font-medium text-text-tertiary mb-1.5">Tarih & Saat</label>
-                            <input
-                                type="datetime-local"
-                                value={occurredAt}
-                                onChange={(e) => setOccurredAt(e.target.value)}
-                                required
-                                className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-sm"
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="date"
+                                    value={dateStr}
+                                    onChange={(e) => {
+                                        setDateStr(e.target.value)
+                                        // Blur to close native picker, then focus time
+                                        e.target.blur()
+                                        setTimeout(() => timeInputRef.current?.focus(), 50)
+                                    }}
+                                    required
+                                    className="flex-1 px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-sm"
+                                />
+                                <input
+                                    ref={timeInputRef}
+                                    type="time"
+                                    value={timeStr}
+                                    onChange={(e) => setTimeStr(e.target.value)}
+                                    className="w-28 px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-sm"
+                                />
+                            </div>
                         </div>
 
                         {/* Link to Obligation */}
