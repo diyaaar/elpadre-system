@@ -1,16 +1,17 @@
 // ============================================================
 // TRANSACTION LIST with filters
-// Displays filtered transactions, delete/archive actions
+// Click a row → action popup (edit / archive / delete)
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, Trash2, Archive, ExternalLink, ChevronDown, ChevronUp, Pencil } from 'lucide-react'
+import { Plus, Trash2, Archive, ExternalLink, ChevronDown, ChevronUp, Pencil, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import { formatCurrency } from '../types/finance.types'
 import type { FinanceTransaction } from '../types/finance.types'
 import { TransactionForm } from './TransactionForm'
 import { getReceiptUrl } from '../../../lib/financeStorage'
+import { Portal } from '../../../components/Portal'
 
 export function TransactionSection() {
     const {
@@ -25,6 +26,7 @@ export function TransactionSection() {
 
     const [showForm, setShowForm] = useState(false)
     const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null)
+    const [activeTransaction, setActiveTransaction] = useState<FinanceTransaction | null>(null)
     const [showFilters, setShowFilters] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -33,8 +35,19 @@ export function TransactionSection() {
 
     const handleDelete = async (id: string, receiptPath: string | null) => {
         setDeletingId(id)
+        setActiveTransaction(null)
         await deleteTransaction(id, receiptPath)
         setDeletingId(null)
+    }
+
+    const handleArchive = async (id: string) => {
+        setActiveTransaction(null)
+        await archiveTransaction(id)
+    }
+
+    const handleEdit = (txn: FinanceTransaction) => {
+        setActiveTransaction(null)
+        setEditingTransaction(txn)
     }
 
     return (
@@ -160,7 +173,8 @@ export function TransactionSection() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, x: -20, height: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    className="group flex items-center gap-4 p-4 bg-background-elevated hover:bg-background-tertiary rounded-xl border border-white/5 hover:border-white/10 transition-all"
+                                    onClick={() => setActiveTransaction(txn)}
+                                    className="cursor-pointer flex items-center gap-4 p-4 bg-background-elevated hover:bg-background-tertiary active:scale-[0.99] rounded-xl border border-white/5 hover:border-white/10 transition-all select-none"
                                 >
                                     {/* Color dot */}
                                     <div
@@ -191,48 +205,132 @@ export function TransactionSection() {
                                         {new Date(txn.occurred_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
                                     </span>
 
-                                    {/* Actions — visible on hover */}
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => setEditingTransaction(txn)}
-                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-primary hover:bg-primary/10 transition-all"
-                                            title="Düzenle"
-                                        >
-                                            <Pencil className="w-3.5 h-3.5" />
-                                        </button>
-                                        {txn.receipt_path && (
-                                            <a
-                                                href={getReceiptUrl(txn.receipt_path)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
-                                                title="Fişi görüntüle"
-                                            >
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                            </a>
-                                        )}
-                                        <button
-                                            onClick={() => archiveTransaction(txn.id)}
-                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
-                                            title="Arşivle"
-                                        >
-                                            <Archive className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(txn.id, txn.receipt_path)}
-                                            disabled={deletingId === txn.id}
-                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
-                                            title="Sil"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
+                                    {/* Deleting spinner */}
+                                    {deletingId === txn.id && (
+                                        <div className="w-4 h-4 border-2 border-danger/40 border-t-danger rounded-full animate-spin flex-shrink-0" />
+                                    )}
                                 </motion.div>
                             )
                         })}
                     </AnimatePresence>
                 </div>
             )}
+
+            {/* ── Transaction Action Popup ── */}
+            <AnimatePresence>
+                {activeTransaction && (() => {
+                    const txn = activeTransaction
+                    const cat = getCategoryForTxn(txn.category_id)
+                    const isIncome = txn.type === 'income'
+                    return (
+                        <Portal>
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+                                onClick={() => setActiveTransaction(null)}
+                            >
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+                                {/* Panel */}
+                                <motion.div
+                                    initial={{ y: 60, opacity: 0, scale: 0.97 }}
+                                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                                    exit={{ y: 60, opacity: 0, scale: 0.97 }}
+                                    transition={{ type: 'spring', bounce: 0.18, duration: 0.35 }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="relative w-full sm:max-w-sm bg-background-secondary border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+                                >
+                                    {/* Drag handle (mobile) */}
+                                    <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                                        <div className="w-10 h-1 bg-white/20 rounded-full" />
+                                    </div>
+
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div
+                                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: cat?.color || (isIncome ? '#10b981' : '#ef4444') }}
+                                            />
+                                            <div className="min-w-0">
+                                                <p className={`text-lg font-bold ${isIncome ? 'text-success' : 'text-danger'}`}>
+                                                    {isIncome ? '+' : '-'}{formatCurrency(txn.amount, txn.currency)}
+                                                </p>
+                                                {cat && <p className="text-xs text-text-tertiary">{cat.name}</p>}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setActiveTransaction(null)}
+                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Meta info */}
+                                    <div className="px-5 py-3 space-y-1 border-b border-white/5">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-text-tertiary">Tarih</span>
+                                            <span className="text-white">
+                                                {new Date(txn.occurred_at).toLocaleDateString('tr-TR', {
+                                                    day: 'numeric', month: 'long', year: 'numeric',
+                                                    hour: '2-digit', minute: '2-digit'
+                                                })}
+                                            </span>
+                                        </div>
+                                        {txn.note && (
+                                            <div className="flex items-start justify-between gap-4 text-sm">
+                                                <span className="text-text-tertiary shrink-0">Not</span>
+                                                <span className="text-white text-right">{txn.note}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="p-3 space-y-1.5">
+                                        {txn.receipt_path && (
+                                            <a
+                                                href={getReceiptUrl(txn.receipt_path)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-all text-sm"
+                                            >
+                                                <ExternalLink className="w-4 h-4 shrink-0" />
+                                                Fişi Görüntüle
+                                            </a>
+                                        )}
+                                        <button
+                                            onClick={() => handleEdit(txn)}
+                                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-text-secondary hover:text-primary hover:bg-primary/10 transition-all text-sm"
+                                        >
+                                            <Pencil className="w-4 h-4 shrink-0" />
+                                            Düzenle
+                                        </button>
+                                        <button
+                                            onClick={() => handleArchive(txn.id)}
+                                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-all text-sm"
+                                        >
+                                            <Archive className="w-4 h-4 shrink-0" />
+                                            Arşivle
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(txn.id, txn.receipt_path)}
+                                            disabled={deletingId === txn.id}
+                                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-danger hover:bg-danger/10 transition-all text-sm disabled:opacity-50"
+                                        >
+                                            <Trash2 className="w-4 h-4 shrink-0" />
+                                            {deletingId === txn.id ? 'Siliniyor...' : 'Sil'}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        </Portal>
+                    )
+                })()}
+            </AnimatePresence>
 
             {/* Transaction Form Modal — Create */}
             <AnimatePresence>

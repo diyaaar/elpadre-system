@@ -210,7 +210,7 @@ export function CalendarPage() {
   const rbcEvents = events.map(toRBCEvent)
 
   return (
-    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 h-full">
+    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 h-full p-4 sm:p-6">
       {/* Sidebar */}
       <CalendarSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 

@@ -256,7 +256,7 @@ export function ObligationSection() {
                                                 <h2 className="text-lg font-semibold text-white">{detail.description}</h2>
                                                 {detail.counterparty && <p className="text-xs text-text-tertiary">{detail.counterparty}</p>}
                                             </div>
-                                            <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all">
+                                            <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-all">
                                                 <X className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -317,13 +317,13 @@ export function ObligationSection() {
                                                         className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-success/20 hover:bg-success/30 text-success border border-success/30 rounded-xl text-sm font-medium transition-all"
                                                     >
                                                         <Check className="w-4 h-4" />
-                                                        Kapat
+                                                        Borcu Kapat
                                                     </button>
                                                     <button
                                                         onClick={async () => { await deleteObligation(detail.id); setDetail(null) }}
                                                         className="flex-1 py-2.5 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-sm transition-all"
                                                     >
-                                                        Sil
+                                                        Borcu Sil
                                                     </button>
                                                 </div>
                                             )}
