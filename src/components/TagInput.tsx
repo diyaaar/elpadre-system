@@ -97,7 +97,7 @@ export function TagInput({
     return (
         <div className={`relative ${className}`} ref={containerRef}>
             <div
-                className="flex flex-wrap items-center gap-1.5 p-1.5 bg-background-elevated/50 border border-white/10 rounded-xl focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary/50 transition-all cursor-text min-h-[42px]"
+                className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white/[0.03] border border-white/10 rounded-xl focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/30 transition-all cursor-text min-h-[42px]"
                 onClick={() => inputRef.current?.focus()}
             >
                 <AnimatePresence>
@@ -143,7 +143,7 @@ export function TagInput({
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className="absolute z-50 left-0 right-0 mt-2 bg-background-elevated border border-white/10 rounded-xl shadow-glass-lg overflow-hidden max-h-60 overflow-y-auto"
+                        className="absolute z-50 -left-2 -right-2 sm:-left-4 sm:-right-4 mt-2 bg-background-elevated border border-white/10 rounded-xl shadow-glass-lg overflow-hidden max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
                     >
                         {loadingTags ? (
                             <div className="p-3 text-center text-xs text-text-tertiary">Loading tags...</div>
@@ -156,9 +156,9 @@ export function TagInput({
                                         onClick={() => handleSelectTag(tag)}
                                         className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/5 transition-colors group"
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                                            <span className="text-text-secondary group-hover:text-text-primary">{tag.name}</span>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tag.color }} />
+                                            <span className="text-text-secondary group-hover:text-white font-medium">{tag.name}</span>
                                         </div>
                                         {/* Check indicator if already selected (though we filter them out, keeping structure robust) */}
                                         {selectedTags.some(t => t.id === tag.id) && <Check className="w-4 h-4 text-primary" />}

@@ -119,12 +119,31 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
     }
   }
 
-  const getPriorityColor = (p: string) => {
+  const getPriorityStyle = (p: string, isSelected: boolean) => {
     switch (p) {
-      case 'high': return 'text-danger bg-danger/10 border-danger/20 hover:bg-danger/20'
-      case 'medium': return 'text-warning bg-warning/10 border-warning/20 hover:bg-warning/20'
-      case 'low': return 'text-success bg-success/10 border-success/20 hover:bg-success/20'
-      default: return 'text-text-tertiary bg-white/5 border-white/10 hover:bg-white/10'
+      case 'high':
+        return isSelected
+          ? 'text-danger bg-danger/15 border-danger/30'
+          : 'text-text-tertiary hover:text-danger hover:bg-danger/10 border-transparent hover:border-danger/20'
+      case 'medium':
+        return isSelected
+          ? 'text-warning bg-warning/15 border-warning/30'
+          : 'text-text-tertiary hover:text-warning hover:bg-warning/10 border-transparent hover:border-warning/20'
+      case 'low':
+        return isSelected
+          ? 'text-success bg-success/15 border-success/30'
+          : 'text-text-tertiary hover:text-success hover:bg-success/10 border-transparent hover:border-success/20'
+      default:
+        return 'text-text-tertiary bg-white/5 border-white/10 hover:bg-white/10'
+    }
+  }
+
+  const getPriorityLabel = (p: string) => {
+    switch (p) {
+      case 'high': return 'Yüksek'
+      case 'medium': return 'Orta'
+      case 'low': return 'Düşük'
+      default: return ''
     }
   }
 
@@ -138,13 +157,13 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         ${parentTaskId ? 'ml-0 sm:ml-4 mb-4' : 'mb-6'}
       `}
     >
-      <div className="p-4 space-y-4">
-        {/* Title Input */}
-        <div className="flex gap-3">
-          <div className="mt-1.5 flex-shrink-0">
-            <div className="w-4 h-4 rounded-full border-2 border-primary/30" />
+      <div className="p-3 space-y-3">
+        {/* Title & Description Input Container */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 flex items-start gap-3 transition-colors focus-within:border-primary/30 focus-within:bg-white/[0.05]">
+          <div className="mt-1 flex-shrink-0">
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-primary/40" />
           </div>
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-2">
             <input
               ref={titleInputRef}
               type="text"
@@ -152,7 +171,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={parentTaskId ? "Yeni alt görev başlığı..." : "Görev başlığı..."}
-              className="w-full bg-transparent border-none p-0 text-lg font-medium placeholder:text-text-tertiary/50 focus:ring-0 text-text-primary"
+              className="w-full bg-transparent border-none p-0 text-base font-medium placeholder:text-text-tertiary/50 focus:ring-0 text-text-primary"
             />
 
             <textarea
@@ -160,30 +179,37 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               onChange={(e) => setDescription(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Açıklama (isteğe bağlı)"
-              rows={2}
-              className="w-full bg-transparent border-none p-0 text-sm text-text-secondary placeholder:text-text-tertiary/50 focus:ring-0 resize-none font-normal"
+              rows={1}
+              className="w-full bg-transparent border-none p-0 text-xs text-text-secondary placeholder:text-text-tertiary/50 focus:ring-0 resize-none font-normal leading-relaxed"
+              style={{ minHeight: '24px' }}
             />
           </div>
         </div>
 
         {/* Controls Row */}
-        <div className="flex flex-wrap items-center gap-3 pl-7">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Priority Toggles */}
-          <div className="flex items-center gap-1">
-            {(['low', 'medium', 'high'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPriority(priority === p ? null : p)}
-                className={`
-                  p-1.5 rounded-md transition-all duration-200 border border-transparent
-                  ${priority === p ? getPriorityColor(p) : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'}
-                `}
-                title={`Önceliği ${p} olarak ayarla`}
-              >
-                <Flag className={`w-4 h-4 ${priority === p ? 'fill-current' : ''}`} />
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5">
+            {(['low', 'medium', 'high'] as const).map((p) => {
+              const isSelected = priority === p
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPriority(isSelected ? null : p)}
+                  className={`
+                    flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200
+                    ${getPriorityStyle(p, isSelected)}
+                  `}
+                  title={`Önceliği ${p} olarak ayarla`}
+                >
+                  <Flag className={`w-3.5 h-3.5 ${isSelected ? 'fill-current' : ''}`} />
+                  <span className={isSelected ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}>
+                    {getPriorityLabel(p)}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           <div className="h-4 w-px bg-white/10" />
@@ -207,7 +233,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
         </div>
 
         {/* Tag Input */}
-        <div className="pl-7">
+        <div>
           <TagInput
             selectedTags={tags} // tags state
             onTagsChange={setTags}
@@ -234,8 +260,8 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between px-4 py-3 bg-background-tertiary/30 border-t border-white/5">
-        <div className="flex items-center gap-2 text-xs text-text-tertiary pl-7">
+      <div className="flex items-center justify-between px-3 py-2.5 bg-background-tertiary/30 border-t border-white/5">
+        <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
           <span className="hidden sm:inline-block opacity-60">Kaydetmek için ⌘+Enter'a basın</span>
         </div>
 
