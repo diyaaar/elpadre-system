@@ -299,7 +299,7 @@ export function TransactionSection() {
                                                 className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-all text-sm"
                                             >
                                                 <ExternalLink className="w-4 h-4 shrink-0" />
-                                                Fişi Görüntüle
+                                                Dosyayı Görüntüle
                                             </button>
                                         )}
                                         <button
