@@ -14,9 +14,9 @@ import {
   Link as LinkIcon,
   X,
   Folder,
-  Loader2,
-  MoreHorizontal
+  Loader2
 } from 'lucide-react'
+import { Portal } from './Portal'
 import { TaskWithSubtasks } from '../types/task'
 import { useTasks } from '../contexts/TasksContext'
 import { useTags } from '../contexts/TagsContext'
@@ -66,8 +66,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
   }
 
   const [isExpanded, setIsExpanded] = useState(getStoredExpandedState)
-  const [isHovered, setIsHovered] = useState(false)
-  const [showActions, setShowActions] = useState(false)
+  const [showActionMenu, setShowActionMenu] = useState(false)
 
   // Update localStorage when expand state changes
   const handleToggleExpand = () => {
@@ -341,17 +340,21 @@ export function Task({ task, depth = 0 }: TaskProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => { setIsHovered(false); setShowActions(false); }}
       className="group mb-3"
       style={{ marginLeft: `${Math.min(depth * 24, 72)}px` }}
     >
       <div
         className={`
-          relative rounded-xl border transition-all duration-300 overflow-hidden
+          relative rounded-xl border transition-all duration-300 overflow-hidden cursor-pointer
           ${task.completed ? 'bg-background-secondary/30 border-white/5 opacity-70' : 'bg-background-secondary/60 backdrop-blur-md border-white/10 shadow-glass hover:shadow-glass-lg hover:border-primary/20 hover:bg-background-secondary/80'}
           ${isOverdue ? 'border-danger/30 bg-danger/5' : ''}
         `}
+        onClick={(e) => {
+          // Don't open menu when clicking interactive elements
+          const target = e.target as HTMLElement
+          const interactive = target.closest('button, a, input, textarea, label, [role="button"]')
+          if (!interactive) setShowActionMenu(true)
+        }}
       >
         {/* Background Image - Thumbnail Mode */}
         {backgroundImageUrl && displayMode === 'thumbnail' && (
@@ -508,37 +511,119 @@ export function Task({ task, depth = 0 }: TaskProps) {
           </div>
         </div>
 
-        {/* Action Bar - Reveals on Hover or Click on Mobile */}
-        <div className={`
-          absolute top-3 right-3 flex items-center gap-1 transition-all duration-300
-          ${isHovered || showActions ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}
-        `}>
-          <div className="flex items-center gap-1 bg-background-elevated/90 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-lg">
-            <button onClick={() => setShowAISuggestions(true)} className="p-1.5 hover:bg-primary/20 text-text-tertiary hover:text-primary rounded-md transition-colors" title="AI Önerileri"><Sparkles className="w-4 h-4" /></button>
-            <button onClick={handleAddToCalendar} disabled={isAddingToCalendar} className="p-1.5 hover:bg-primary/20 text-text-tertiary hover:text-primary rounded-md transition-colors">
-              {isAddingToCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
-            </button>
-            <button onClick={() => setShowAddSubtask(!showAddSubtask)} className="p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-md transition-colors"><Plus className="w-4 h-4" /></button>
-            <button onClick={() => setIsEditing(true)} className="p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-md transition-colors"><Edit className="w-4 h-4" /></button>
-            <button onClick={() => setShowDeleteConfirm(true)} className="p-1.5 hover:bg-danger/20 text-text-tertiary hover:text-danger rounded-md transition-colors"><Trash2 className="w-4 h-4" /></button>
+        {/* Action Menu — centered overlay via Portal */}
+        <AnimatePresence>
+          {showActionMenu && (
+            <Portal>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setShowActionMenu(false)}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                  className="bg-background-elevated/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 w-full max-w-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Title */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="min-w-0">
+                      <p className="text-xs text-text-tertiary uppercase tracking-wider font-medium mb-0.5">İşlem Seç</p>
+                      <p className="text-sm font-medium text-text-primary truncate max-w-[200px]">{task.title}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowActionMenu(false)}
+                      className="flex-shrink-0 p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-lg transition-colors ml-2"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-            {/* Simple Menu for Attachments */}
-            <div className="w-px h-4 bg-white/10 mx-0.5" />
-            <button onClick={() => setShowBackgroundModal(true)} className="p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-md"><ImageIcon className="w-4 h-4" /></button>
-            <button onClick={() => setShowLinkModal(true)} className="p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-md"><LinkIcon className="w-4 h-4" /></button>
-            <button onClick={() => setShowMoveModal(true)} className="p-1.5 hover:bg-white/10 text-text-tertiary hover:text-white rounded-md"><Folder className="w-4 h-4" /></button>
-          </div>
-        </div>
+                  {/* Grid of Actions */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* AI Önerileri */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowAISuggestions(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-primary/10 text-text-tertiary hover:text-primary transition-all group"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">AI Öneri</span>
+                    </button>
 
-        {/* Mobile Action Toggle — hidden while the action bar is open to avoid overlap */}
-        {!showActions && (
-          <button
-            className="md:hidden absolute top-3 right-3 p-2 text-text-tertiary"
-            onClick={(e) => { e.stopPropagation(); setShowActions(true); }}
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-        )}
+                    {/* Takvime Ekle */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); handleAddToCalendar() }}
+                      disabled={isAddingToCalendar}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-primary/10 text-text-tertiary hover:text-primary transition-all group disabled:opacity-40"
+                    >
+                      {isAddingToCalendar ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarPlus className="w-5 h-5" />}
+                      <span className="text-[10px] font-medium leading-tight text-center">Takvim</span>
+                    </button>
+
+                    {/* Alt Görev */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowAddSubtask(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 text-text-tertiary hover:text-white transition-all group"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Alt Görev</span>
+                    </button>
+
+                    {/* Düzenle */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setIsEditing(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 text-text-tertiary hover:text-white transition-all group"
+                    >
+                      <Edit className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Düzenle</span>
+                    </button>
+
+                    {/* Arka Plan */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowBackgroundModal(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 text-text-tertiary hover:text-white transition-all group"
+                    >
+                      <ImageIcon className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Arka Plan</span>
+                    </button>
+
+                    {/* Bağlantı */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowLinkModal(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 text-text-tertiary hover:text-white transition-all group"
+                    >
+                      <LinkIcon className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Bağlantı</span>
+                    </button>
+
+                    {/* Taşı */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowMoveModal(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 text-text-tertiary hover:text-white transition-all group"
+                    >
+                      <Folder className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Taşı</span>
+                    </button>
+
+                    {/* Sil */}
+                    <button
+                      onClick={() => { setShowActionMenu(false); setShowDeleteConfirm(true) }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-danger/20 text-text-tertiary hover:text-danger transition-all group"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                      <span className="text-[10px] font-medium leading-tight text-center">Sil</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </Portal>
+          )}
+        </AnimatePresence>
 
         {/* Expand/Collapse Button (Bottom Center) */}
         {hasSubtasks && (

@@ -136,8 +136,7 @@ export function TagInput({
                     type="text"
                     value={inputValue}
                     onChange={(e) => { setInputValue(e.target.value); setIsOpen(true); }}
-                    onFocus={(e) => {
-                        // Avoid immediate toggle issues if clicked while not focused
+                    onFocus={() => {
                         setIsOpen(true)
                     }}
                     onClick={(e) => {
