@@ -56,56 +56,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!q) return res.status(400).json({ error: 'q parameter is required' })
 
     try {
-      const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'none',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1'
-      }
+      const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=6&gsrlimit=30&prop=imageinfo&iiprop=url&iiurlwidth=600&format=json&origin=*`
 
-      const htmlRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`, { headers })
-      const html = await htmlRes.text()
-
-      // More robust regex for vqd extraction
-      const match = html.match(/vqd[=:'"]+([^"'\s&]+)/i)
-
-      if (!match) {
-        console.error('Failed to obtain duckduckgo token. HTML snippet:', html.substring(0, 500))
-        // Return empty results rather than crashing, to avoid 500 on frontend
-        return res.status(200).json({ results: [] })
-      }
-
-      const vqd = match[1]
-
-      const searchRes = await fetch(`https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(q)}&vqd=${vqd}&f=,,,,,&p=1`, {
-        headers: {
-          ...headers,
-          'Referer': 'https://duckduckgo.com/',
-          'Accept': 'application/json, text/javascript, */*; q=0.01',
-          'sec-fetch-dest': 'empty',
-          'sec-fetch-mode': 'cors',
-          'sec-fetch-site': 'same-origin'
-        }
-      })
-
+      const searchRes = await fetch(url)
       const data = await searchRes.json()
 
-      const results = (data.results || []).slice(0, 30).map((r: any) => ({
-        title: r.title,
-        image: r.image,
-        thumbnail: r.thumbnail
-      }))
+      const pages = data.query?.pages || {}
+      const results = Object.values(pages).map((p: any) => {
+        const info = p.imageinfo?.[0]
+        return {
+          title: p.title.replace(/^File:/i, '').replace(/\.\w+$/, ''),
+          image: info?.url,
+          thumbnail: info?.thumburl || info?.url
+        }
+      }).filter((r: any) => r.image) // Only return items that actually have images
 
       return res.status(200).json({ results })
     } catch (err: any) {
-      console.error('Image search error:', err)
+      console.error('Wikimedia search error:', err)
       // Return empty results instead of 500 to keep UI graceful
       return res.status(200).json({ results: [] })
     }
