@@ -167,13 +167,13 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
           table: 'workspaces',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
+        () => {
           if (isMounted) {
             fetchWorkspaces()
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe(() => {
       })
 
     return () => {

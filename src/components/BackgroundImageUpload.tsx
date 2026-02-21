@@ -58,11 +58,11 @@ export function BackgroundImageUpload({
       } else {
         setImageUrl(result.url)
         setPreviewUrl(result.url)
-        showToast('Image uploaded successfully', 'success', 2000)
+        showToast('Resim başarıyla yüklendi', 'success', 2000)
       }
     } catch (err) {
       console.error('Upload error:', err)
-      showToast('Failed to upload image', 'error', 3000)
+      showToast('Resim yüklenemedi', 'error', 3000)
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -73,19 +73,19 @@ export function BackgroundImageUpload({
 
   const handleUrlSubmit = () => {
     if (!urlInput.trim()) {
-      showToast('Please enter a valid URL', 'error', 2000)
+      showToast('Lütfen geçerli bir URL girin', 'error', 2000)
       return
     }
 
     if (!isValidImageUrl(urlInput)) {
-      showToast('Invalid URL format', 'error', 2000)
+      showToast('Geçersiz URL formatı', 'error', 2000)
       return
     }
 
     setImageUrl(urlInput)
     setPreviewUrl(urlInput)
     setUrlInput('')
-    showToast('Image URL set', 'success', 2000)
+    showToast('Resim bağlantısı eklendi', 'success', 2000)
   }
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -100,11 +100,11 @@ export function BackgroundImageUpload({
       const data = await response.json()
       setSearchResults(data.results || [])
       if (data.results?.length === 0) {
-        showToast('No images found', 'info', 2000)
+        showToast('Resim bulunamadı', 'info', 2000)
       }
     } catch (err) {
       console.error('Search error:', err)
-      showToast('Failed to search images', 'error', 3000)
+      showToast('Resim arama başarısız oldu', 'error', 3000)
     } finally {
       setIsSearching(false)
     }
@@ -113,7 +113,7 @@ export function BackgroundImageUpload({
   const handleSelectSearchResult = (image: string) => {
     setImageUrl(image)
     setPreviewUrl(image)
-    showToast('Image selected', 'success', 2000)
+    showToast('Resim seçildi', 'success', 2000)
   }
 
   const handleRemove = async () => {
@@ -127,7 +127,7 @@ export function BackgroundImageUpload({
     }
     setImageUrl('')
     setPreviewUrl(null)
-    showToast('Background image removed', 'success', 2000)
+    showToast('Arka plan resmi kaldırıldı', 'success', 2000)
   }
 
   const handleSave = async () => {
@@ -162,7 +162,7 @@ export function BackgroundImageUpload({
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-text-primary">Set Background Image</h2>
+            <h2 className="text-xl font-semibold text-text-primary">Arka Plan Resmi Ayarla</h2>
             <button
               onClick={onClose}
               className="p-1 hover:bg-background-tertiary rounded transition-colors"
@@ -182,7 +182,7 @@ export function BackgroundImageUpload({
                 }`}
             >
               <Upload className="w-4 h-4 inline mr-2" />
-              Upload File
+              Dosya Yükle
             </button>
             <button
               onClick={() => setUploadMethod('url')}
@@ -192,7 +192,7 @@ export function BackgroundImageUpload({
                 }`}
             >
               <LinkIcon className="w-4 h-4 inline mr-2" />
-              URL
+              Bağlantı
             </button>
             <button
               onClick={() => setUploadMethod('search')}
@@ -202,7 +202,7 @@ export function BackgroundImageUpload({
                 }`}
             >
               <Search className="w-4 h-4 inline mr-2" />
-              Search
+              Ara
             </button>
           </div>
 
@@ -236,13 +236,13 @@ export function BackgroundImageUpload({
                   {uploading ? (
                     <>
                       <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-                      <span className="text-text-secondary">Uploading...</span>
+                      <span className="text-text-secondary">Yükleniyor...</span>
                     </>
                   ) : (
                     <>
                       <Upload className="w-12 h-12 text-text-tertiary mb-3" />
-                      <span className="text-text-secondary mb-1">Click to upload or drag and drop</span>
-                      <span className="text-xs text-text-tertiary">Max 10MB (JPEG, PNG, GIF, WebP)</span>
+                      <span className="text-text-secondary mb-1">Yüklemek için tıklayın veya sürükleyip bırakın</span>
+                      <span className="text-xs text-text-tertiary">Maks. 10MB (JPEG, PNG, GIF, WebP)</span>
                     </>
                   )}
                 </label>
@@ -268,7 +268,7 @@ export function BackgroundImageUpload({
                     onClick={handleUrlSubmit}
                     className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
                   >
-                    Set URL
+                    Bağlantı Ekle
                   </button>
                 </div>
               </motion.div>
@@ -286,7 +286,7 @@ export function BackgroundImageUpload({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search for an image (e.g. nature, minimalist)"
+                    placeholder="Resim arayın (örn. doğa, minimalist)"
                     className="flex-1 px-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                   <button
@@ -294,7 +294,7 @@ export function BackgroundImageUpload({
                     disabled={isSearching || !searchQuery.trim()}
                     className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors flex items-center justify-center min-w-[100px] disabled:opacity-50"
                   >
-                    {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
+                    {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Ara'}
                   </button>
                 </form>
 
@@ -320,7 +320,7 @@ export function BackgroundImageUpload({
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-text-tertiary p-4 text-center">
                       <Search className="w-8 h-8 mb-2 opacity-50" />
-                      <p className="text-sm">Search the web for a background image</p>
+                      <p className="text-sm">İnternette arka plan resmi ara</p>
                     </div>
                   )}
                 </div>
@@ -333,7 +333,7 @@ export function BackgroundImageUpload({
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <Eye className="w-4 h-4 text-text-tertiary" />
-                <span className="text-sm text-text-secondary">Preview</span>
+                <span className="text-sm text-text-secondary">Önizleme</span>
               </div>
               <div className="relative rounded-lg overflow-hidden border border-background-tertiary">
                 <img
@@ -342,7 +342,7 @@ export function BackgroundImageUpload({
                   className="w-full h-48 object-cover"
                   onError={() => {
                     setPreviewUrl(null)
-                    showToast('Failed to load image', 'error', 2000)
+                    showToast('Resim yüklenemedi', 'error', 2000)
                   }}
                 />
                 <button
@@ -360,7 +360,7 @@ export function BackgroundImageUpload({
           {previewUrl && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Display Style
+                Görünüm Stili
               </label>
               <div className="flex gap-3">
                 <button
@@ -371,8 +371,8 @@ export function BackgroundImageUpload({
                     }`}
                 >
                   <ImageIcon className="w-6 h-6 mx-auto mb-2 text-text-tertiary" />
-                  <span className="text-sm text-text-secondary">Thumbnail</span>
-                  <span className="text-xs text-text-tertiary block mt-1">Above task</span>
+                  <span className="text-sm text-text-secondary">Tam Genişlik</span>
+                  <span className="text-xs text-text-tertiary block mt-1">Görevin üzerinde</span>
                 </button>
                 <button
                   onClick={() => setSelectedMode('icon')}
@@ -382,8 +382,8 @@ export function BackgroundImageUpload({
                     }`}
                 >
                   <ImageIcon className="w-6 h-6 mx-auto mb-2 text-text-tertiary" />
-                  <span className="text-sm text-text-secondary">Icon</span>
-                  <span className="text-xs text-text-tertiary block mt-1">Right side</span>
+                  <span className="text-sm text-text-secondary">İkon</span>
+                  <span className="text-xs text-text-tertiary block mt-1">Görevin sağında</span>
                 </button>
               </div>
             </div>
@@ -395,14 +395,14 @@ export function BackgroundImageUpload({
               onClick={onClose}
               className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
             >
-              Cancel
+              İptal
             </button>
             <button
               onClick={handleSave}
               disabled={uploading}
               className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50"
             >
-              Save
+              Kaydet
             </button>
           </div>
         </div>

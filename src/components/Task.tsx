@@ -141,7 +141,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
           table: 'task_tags',
           filter: `task_id=eq.${task.id}`,
         },
-        (payload) => {
+        () => {
           // Refresh tags when task_tags change
           getTaskTags(task.id).then(setTaskTags)
         }

@@ -85,7 +85,7 @@ export function LinkAttachmentModal({
 
   const handleSave = async () => {
     if (!url.trim()) {
-      showToast('Please enter a URL', 'error', 3000)
+      showToast('Lütfen bir bağlantı adresi girin', 'error', 3000)
       return
     }
 
@@ -94,7 +94,7 @@ export function LinkAttachmentModal({
 
     // Validate URL after auto-fix
     if (!isValidUrl(fixedUrl)) {
-      showToast('Invalid URL format. Please enter a valid link.', 'error', 3000)
+      showToast('Geçersiz format. Lütfen geçerli bir bağlantı adresi girin.', 'error', 3000)
       return
     }
 
@@ -106,7 +106,7 @@ export function LinkAttachmentModal({
       onClose()
     } catch (err) {
       console.error('Error saving link:', err)
-      showToast('Failed to save link', 'error', 3000)
+      showToast('Bağlantı kaydedilemedi', 'error', 3000)
     } finally {
       setSaving(false)
     }
@@ -134,7 +134,7 @@ export function LinkAttachmentModal({
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-text-primary">
-                {link ? 'Edit Link' : 'Add Link'}
+                {link ? 'Bağlantıyı Düzenle' : 'Bağlantı Ekle'}
               </h2>
               <button
                 onClick={onClose}
@@ -148,7 +148,7 @@ export function LinkAttachmentModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Link URL <span className="text-danger">*</span>
+                  Bağlantı Adresi <span className="text-danger">*</span>
                 </label>
                 <input
                   type="url"
@@ -162,17 +162,17 @@ export function LinkAttachmentModal({
 
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Display Name <span className="text-text-tertiary">(optional)</span>
+                  Görüntülenen Ad <span className="text-text-tertiary">(isteğe bağlı)</span>
                 </label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g., Design Inspiration"
+                  placeholder="örn., Tasarım Fikirleri"
                   className="w-full px-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-xs text-text-tertiary mt-1">
-                  If empty, the URL will be used as the display name
+                  Boş bırakılırsa bağlantı adresi görüntülenir
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export function LinkAttachmentModal({
                 onClick={onClose}
                 className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
               >
-                Cancel
+                İptal
               </button>
               <button
                 onClick={handleSave}
@@ -190,7 +190,7 @@ export function LinkAttachmentModal({
                 className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <LinkIcon className="w-4 h-4" />
-                {saving ? 'Saving...' : link ? 'Update' : 'Add Link'}
+                {saving ? 'Kaydediliyor...' : link ? 'Güncelle' : 'Bağlantı Ekle'}
               </button>
             </div>
           </div>
