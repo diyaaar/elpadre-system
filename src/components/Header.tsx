@@ -79,10 +79,10 @@ export function Header() {
             <div className="flex items-center gap-3">
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">
-                  Modern Zihin Haritası
+                  Yönetim Sistemi
                 </h1>
                 <p className="text-[10px] text-text-tertiary font-medium tracking-wider uppercase hidden sm:block">
-                  Akıllı Görev Yönetimi
+                  by Ali Diyar DURAN
                 </p>
               </div>
             </div>
