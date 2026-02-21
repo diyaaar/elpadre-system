@@ -62,13 +62,13 @@ export function TagsProvider({ children }: { children: ReactNode }) {
     }
 
     const userId = user.id
-    
+
     // Initial fetch
     fetchTags()
 
     const supabase = getSupabase()
     const channelName = `tags-changes-${userId}`
-    
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -79,14 +79,8 @@ export function TagsProvider({ children }: { children: ReactNode }) {
           table: 'tags',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          console.log('[Realtime] Tag change received:', {
-            event: payload.eventType,
-            table: payload.table,
-            new: payload.new,
-            old: payload.old,
-          })
-          // Refetch tags when any change occurs
+        () => {
+          // Tag change received
           fetchTags()
         }
       )
@@ -97,19 +91,14 @@ export function TagsProvider({ children }: { children: ReactNode }) {
           schema: 'public',
           table: 'task_tags',
         },
-        (payload) => {
-          console.log('[Realtime] Task tag change received:', {
-            event: payload.eventType,
-            table: payload.table,
-            new: payload.new,
-            old: payload.old,
-          })
+        () => {
+          // Task tag change received
           // Note: Individual components will handle refreshing their own task tags
-          // This subscription is mainly for logging and potential future use
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
+          // Subscribed successfully
         } else if (status === 'CHANNEL_ERROR') {
           console.error('[Realtime] ✗ Channel error - check Supabase Replication settings')
         } else if (status === 'TIMED_OUT') {
@@ -177,10 +166,10 @@ export function TagsProvider({ children }: { children: ReactNode }) {
   const deleteTag = useCallback(async (id: string) => {
     // Optimistic update: remove tag from local state immediately
     setTags((prevTags) => prevTags.filter((tag) => tag.id !== id))
-    
+
     try {
       const supabase = getSupabase()
-      
+
       // First, delete all task_tags associations for this tag
       const { error: taskTagsError } = await supabase
         .from('task_tags')
@@ -205,7 +194,7 @@ export function TagsProvider({ children }: { children: ReactNode }) {
         fetchTags()
         throw deleteError
       }
-      
+
       // Success - optimistic update was correct, no need to refetch
       // Realtime subscription will handle any external updates
     } catch (err) {

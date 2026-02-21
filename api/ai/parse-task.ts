@@ -50,6 +50,41 @@ function detectTags(input: string): string[] {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Multiplexing GET request for image search to not exceed Vercel 12-function limit
+  if (req.method === 'GET' && req.query.action === 'image-search') {
+    const q = req.query.q as string
+    if (!q) return res.status(400).json({ error: 'q parameter is required' })
+
+    try {
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+      }
+
+      const htmlRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`, { headers })
+      const html = await htmlRes.text()
+      const match = html.match(/vqd="([^"]+)"/)
+
+      if (!match) return res.status(500).json({ error: 'Failed to obtain duckduckgo token' })
+      const vqd = match[1]
+
+      const searchRes = await fetch(`https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(q)}&vqd=${vqd}&f=,,,,,&p=1`, {
+        headers: { ...headers, 'Referer': 'https://duckduckgo.com/' }
+      })
+      const data = await searchRes.json()
+
+      const results = (data.results || []).slice(0, 30).map((r: any) => ({
+        title: r.title,
+        image: r.image,
+        thumbnail: r.thumbnail
+      }))
+
+      return res.status(200).json({ results })
+    } catch (err: any) {
+      console.error('Image search error:', err)
+      return res.status(500).json({ error: 'Image search failed', details: err.message })
+    }
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

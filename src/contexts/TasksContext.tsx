@@ -173,12 +173,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('[Realtime] Task change received:', {
-            event: payload.eventType,
-            table: payload.table,
-            new: payload.new,
-            old: payload.old,
-          })
+          // Task change received
 
           // Clean up old pending updates
           cleanupPendingUpdates()
