@@ -142,16 +142,33 @@ export function EventFormModal({
         setError(null)
 
         try {
-            // Build the payload matching Google Calendar v3 schema
+            // Build the payload matching Google Calendar v3 schema.
+            //
+            // ⚠️  CRITICAL: Do NOT use new Date(startStr).toISOString() here.
+            //     `startStr` comes from a <input type="datetime-local"> which yields
+            //     a wall-clock string like "2026-02-21T17:30" with NO timezone info.
+            //     Passing it to `new Date()` makes JS treat it as LOCAL time, then
+            //     `.toISOString()` converts to UTC and appends 'Z' — for Istanbul
+            //     (UTC+3) this results in a 3-hour backwards shift.
+            //
+            //     The correct approach: send the raw wall-clock string as-is and
+            //     pair it with an explicit IANA timeZone. The server's `stripOffset`
+            //     in api/calendar/events.ts already handles stripping any accidental
+            //     suffix before forwarding to Google Calendar, which then interprets
+            //     the time correctly in the declared timezone.
             let startPayload: string
             let endPayload: string
 
             if (allDay) {
+                // For all-day events, send only the date part (YYYY-MM-DD)
                 startPayload = startStr.slice(0, 10)
                 endPayload = endStr.slice(0, 10)
             } else {
-                startPayload = new Date(startStr).toISOString()
-                endPayload = new Date(endStr).toISOString()
+                // Send the raw "wall clock" datetime string (YYYY-MM-DDTHH:mm)
+                // exactly as the user entered it — no UTC conversion.
+                // The explicit timeZone field tells Google how to interpret it.
+                startPayload = startStr.slice(0, 16)  // "2026-02-21T17:30"
+                endPayload = endStr.slice(0, 16)
             }
 
             const payload: Omit<CalendarEvent, 'id'> & { timeZone?: string } = {
