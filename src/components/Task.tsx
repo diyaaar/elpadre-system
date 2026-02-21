@@ -402,12 +402,12 @@ export function Task({ task, depth = 0 }: TaskProps) {
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start gap-2">
-              <div className="space-y-1">
-                <h3 className={`text-base font-medium leading-snug transition-colors ${task.completed ? 'text-text-tertiary line-through decoration-2 decoration-text-tertiary/30' : 'text-text-primary'}`}>
+              <div className="space-y-1 flex-1 min-w-0">
+                <h3 className={`text-base font-medium leading-snug break-words transition-colors ${task.completed ? 'text-text-tertiary line-through decoration-2 decoration-text-tertiary/30' : 'text-text-primary'}`}>
                   {task.title}
                 </h3>
                 {task.description && (
-                  <p className="text-sm text-text-tertiary line-clamp-2">{task.description}</p>
+                  <p className="text-sm text-text-tertiary line-clamp-2 break-words">{task.description}</p>
                 )}
               </div>
             </div>
@@ -492,7 +492,7 @@ export function Task({ task, depth = 0 }: TaskProps) {
                       <a
                         href={link.url}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="truncate hover:underline flex-1"
                         onClick={(e) => e.stopPropagation()}
                       >

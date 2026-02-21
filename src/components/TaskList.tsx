@@ -33,7 +33,7 @@ function SortableTask({ task, depth = 0 }: SortableTaskProps) {
         >
           <GripVertical className="w-4 h-4" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Task task={task} depth={depth} />
         </div>
       </div>

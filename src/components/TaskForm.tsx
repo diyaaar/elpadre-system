@@ -225,6 +225,13 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
               <input
                 type="datetime-local"
                 value={deadline}
+                onClick={(e) => {
+                  if ('showPicker' in HTMLInputElement.prototype) {
+                    try {
+                      e.currentTarget.showPicker()
+                    } catch (err) { }
+                  }
+                }}
                 onChange={(e) => setDeadline(e.target.value)}
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
