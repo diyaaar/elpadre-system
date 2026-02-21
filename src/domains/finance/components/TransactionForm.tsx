@@ -294,7 +294,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', bounce: 0.2 }}
-                    className="relative w-full max-w-lg bg-background-secondary border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-lg bg-background-secondary border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
@@ -309,7 +309,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
                         {/* Type Toggle */}
                         <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
                             {(['income', 'expense'] as const).map((t) => (

@@ -162,7 +162,7 @@ export function AvatarUploadModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10"
+          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10 max-h-[calc(100vh-2rem)] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-6">

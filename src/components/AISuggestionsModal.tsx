@@ -112,10 +112,10 @@ export function AISuggestionsModal({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-2xl w-full max-h-[calc(100vh-4rem)] flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-background-tertiary">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-background-tertiary">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Sparkles className="w-5 h-5 text-primary" />
@@ -134,7 +134,7 @@ export function AISuggestionsModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto px-5 py-4">
             {showInput && !loading && (
               <div className="space-y-4">
                 <div>
@@ -253,7 +253,7 @@ export function AISuggestionsModal({
 
           {/* Footer */}
           {!loading && !error && !showInput && suggestions.length > 0 && (
-            <div className="flex items-center justify-between p-6 border-t border-background-tertiary">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-background-tertiary flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {

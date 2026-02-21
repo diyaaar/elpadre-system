@@ -62,7 +62,7 @@ export function ImageAttachmentModal({
         // Extract storage path from URL
         const urlParts = result.url.split('/storage/v1/object/public/task-images/')
         const storagePath = urlParts.length > 1 ? urlParts[1] : result.path
-        
+
         await onSave(
           storagePath,
           selectedFile.name,
@@ -109,10 +109,10 @@ export function ImageAttachmentModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10"
+          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10 max-h-[calc(100vh-2rem)] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-text-primary">Add Image</h2>
               <button

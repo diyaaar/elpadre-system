@@ -66,7 +66,7 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10"
+          className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-md w-full z-10 max-h-[calc(100vh-2rem)] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-6">
@@ -85,7 +85,7 @@ export function MoveTaskModal({ isOpen, onClose, task }: MoveTaskModalProps) {
               "{task.title}" görevini şuraya taşı:
             </p>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
               {workspaces.map((workspace) => {
                 const isSelected = selectedWorkspaceId === workspace.id
                 const isCurrent = workspace.id === task.workspace_id

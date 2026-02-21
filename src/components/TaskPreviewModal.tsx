@@ -91,7 +91,7 @@ export function TaskPreviewModal({
 
   const handleCreateTags = async (suggestedTags: string[]): Promise<Map<string, string>> => {
     const tagIdMap = new Map<string, string>() // tag name -> tag id
-    
+
     // First, map existing tags
     tags.forEach((tag) => {
       tagIdMap.set(tag.name.toLowerCase(), tag.id)
@@ -262,7 +262,7 @@ export function TaskPreviewModal({
           className="bg-background-secondary border border-background-tertiary rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-background-tertiary">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-background-tertiary">
             <div>
               <h2 className="text-xl font-bold text-text-primary">Review Detected Tasks</h2>
               <p className="text-sm text-text-tertiary mt-1">
@@ -278,27 +278,25 @@ export function TaskPreviewModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
             {editableTasks.map((task) => (
               <motion.div
                 key={task.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`border rounded-lg p-4 ${
-                  task.selected
+                className={`border rounded-lg p-4 ${task.selected
                     ? 'border-primary bg-primary/5'
                     : 'border-background-tertiary bg-background-tertiary/30'
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   {/* Checkbox */}
                   <button
                     onClick={() => toggleTaskSelection(task.id)}
-                    className={`mt-1 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                      task.selected
+                    className={`mt-1 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${task.selected
                         ? 'bg-primary border-primary'
                         : 'border-text-tertiary'
-                    }`}
+                      }`}
                   >
                     {task.selected && <Check className="w-3 h-3 text-white" />}
                   </button>
@@ -361,13 +359,12 @@ export function TaskPreviewModal({
                       )}
                       {task.priority && (
                         <span
-                          className={`px-2 py-0.5 rounded ${
-                            task.priority === 'high'
+                          className={`px-2 py-0.5 rounded ${task.priority === 'high'
                               ? 'bg-danger/20 text-danger'
                               : task.priority === 'medium'
-                              ? 'bg-warning/20 text-warning'
-                              : 'bg-success/20 text-success'
-                          }`}
+                                ? 'bg-warning/20 text-warning'
+                                : 'bg-success/20 text-success'
+                            }`}
                         >
                           {task.priority}
                         </span>
@@ -447,7 +444,7 @@ export function TaskPreviewModal({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between p-6 border-t border-background-tertiary">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-t border-background-tertiary">
             <button
               onClick={onClose}
               className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
