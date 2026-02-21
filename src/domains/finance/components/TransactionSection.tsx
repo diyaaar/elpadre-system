@@ -4,10 +4,11 @@
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, Trash2, Archive, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, Archive, ExternalLink, ChevronDown, ChevronUp, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import { formatCurrency } from '../types/finance.types'
+import type { FinanceTransaction } from '../types/finance.types'
 import { TransactionForm } from './TransactionForm'
 import { getReceiptUrl } from '../../../lib/financeStorage'
 
@@ -23,6 +24,7 @@ export function TransactionSection() {
     } = useFinance()
 
     const [showForm, setShowForm] = useState(false)
+    const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null)
     const [showFilters, setShowFilters] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -191,6 +193,13 @@ export function TransactionSection() {
 
                                     {/* Actions — visible on hover */}
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => setEditingTransaction(txn)}
+                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-primary hover:bg-primary/10 transition-all"
+                                            title="Düzenle"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                        </button>
                                         {txn.receipt_path && (
                                             <a
                                                 href={getReceiptUrl(txn.receipt_path)}
@@ -225,9 +234,19 @@ export function TransactionSection() {
                 </div>
             )}
 
-            {/* Transaction Form Modal */}
+            {/* Transaction Form Modal — Create */}
             <AnimatePresence>
                 {showForm && <TransactionForm onClose={() => setShowForm(false)} />}
+            </AnimatePresence>
+
+            {/* Transaction Form Modal — Edit */}
+            <AnimatePresence>
+                {editingTransaction && (
+                    <TransactionForm
+                        editingTransaction={editingTransaction}
+                        onClose={() => setEditingTransaction(null)}
+                    />
+                )}
             </AnimatePresence>
         </div>
     )

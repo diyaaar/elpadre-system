@@ -1,21 +1,25 @@
 // ============================================================
-// TRANSACTION FORM — Modal rendered via Portal to document.body
-// Escapes framer-motion transform containing block
+// TRANSACTION FORM — CREATE and EDIT modes
+// Modal rendered via Portal to escape framer-motion transform context.
 // AI Receipt Auto-Fill: gpt-4o-mini via /api/finance/analyze-receipt
 // ============================================================
 
 import { useState, useRef } from 'react'
-import { X, TrendingUp, TrendingDown, Upload, Paperclip, Camera, Sparkles, Loader2, AlertTriangle, Plus } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, Upload, Paperclip, Camera, Sparkles, Loader2, AlertTriangle, Plus, ExternalLink, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import type { FinanceTransaction } from '../types/finance.types'
+import { kurusToTl } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
+import { getReceiptUrl } from '../../../lib/financeStorage'
 
 interface TransactionFormProps {
     onClose: () => void
     onSuccess?: (txn: FinanceTransaction) => void
     presetType?: 'income' | 'expense'
     presetObligationId?: string
+    /** If provided, the form opens in EDIT mode pre-populated with this transaction */
+    editingTransaction?: FinanceTransaction
 }
 
 interface ReceiptAnalysisResult {
@@ -28,22 +32,42 @@ interface ReceiptAnalysisResult {
     suggested_new_category_name: string | null
 }
 
-export function TransactionForm({ onClose, onSuccess, presetType, presetObligationId }: TransactionFormProps) {
-    const { categories, obligations, getTagsForCategory, createTransaction, createCategory } = useFinance()
+export function TransactionForm({ onClose, onSuccess, presetType, presetObligationId, editingTransaction }: TransactionFormProps) {
+    const { categories, obligations, getTagsForCategory, createTransaction, createCategory, updateTransactionWithReceipt } = useFinance()
+
+    const isEdit = !!editingTransaction
 
     const now = new Date()
     const localDatetime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16)
 
-    const [type, setType] = useState<'income' | 'expense'>(presetType || 'expense')
-    const [amountTl, setAmountTl] = useState('')
-    const [categoryId, setCategoryId] = useState('')
-    const [tagId, setTagId] = useState('')
-    const [obligationId, setObligationId] = useState(presetObligationId || '')
-    const [occurredAt, setOccurredAt] = useState(localDatetime)
-    const [note, setNote] = useState('')
+    // Pre-populate from editingTransaction if in edit mode
+    const initType = editingTransaction?.type ?? presetType ?? 'expense'
+    const initAmountTl = editingTransaction ? kurusToTl(editingTransaction.amount) : ''
+    const initCategoryId = editingTransaction?.category_id ?? ''
+    const initTagId = editingTransaction?.tag_id ?? ''
+    const initObligationId = editingTransaction?.obligation_id ?? presetObligationId ?? ''
+    const initOccurredAt = editingTransaction
+        ? (() => {
+            const d = new Date(editingTransaction.occurred_at)
+            return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+        })()
+        : localDatetime
+    const initNote = editingTransaction?.note ?? ''
+
+    const [type, setType] = useState<'income' | 'expense'>(initType)
+    const [amountTl, setAmountTl] = useState(initAmountTl)
+    const [categoryId, setCategoryId] = useState(initCategoryId)
+    const [tagId, setTagId] = useState(initTagId)
+    const [obligationId, setObligationId] = useState(initObligationId)
+    const [occurredAt, setOccurredAt] = useState(initOccurredAt)
+    const [note, setNote] = useState(initNote)
+
+    // Receipt state
     const [receiptFile, setReceiptFile] = useState<File | null>(null)
+    const [removeExistingReceipt, setRemoveExistingReceipt] = useState(false)
+
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -59,6 +83,10 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
     const filteredCategories = categories.filter((c) => c.type === type)
     const availableTags = categoryId ? getTagsForCategory(categoryId) : []
     const openObligations = obligations.filter((o) => !o.is_closed)
+
+    // The existing receipt path from the transaction (only relevant in edit mode)
+    const existingReceiptPath = editingTransaction?.receipt_path ?? null
+    const showExistingReceipt = isEdit && existingReceiptPath && !removeExistingReceipt && !receiptFile
 
     const handleCategoryChange = (id: string) => {
         setCategoryId(id)
@@ -76,8 +104,13 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null
         setReceiptFile(file)
+        setRemoveExistingReceipt(false)
         setScanError(null)
         setSuggestedCategoryName(null)
+    }
+
+    const handleRemoveExistingReceipt = () => {
+        setRemoveExistingReceipt(true)
     }
 
     // ── AI Receipt Scanner ──────────────────────────────────
@@ -89,14 +122,11 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
         setSuggestedCategoryName(null)
 
         try {
-            // Convert file to base64
             const base64 = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader()
                 reader.onload = () => {
                     const result = reader.result as string
-                    // Strip the data URL prefix to get raw base64
-                    const base64Data = result.split(',')[1]
-                    resolve(base64Data)
+                    resolve(result.split(',')[1])
                 }
                 reader.onerror = () => reject(new Error('Dosya okunamadı'))
                 reader.readAsDataURL(receiptFile)
@@ -108,8 +138,6 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                 body: JSON.stringify({
                     imageBase64: base64,
                     imageMimeType: receiptFile.type || 'image/jpeg',
-                    // Send all categories with their type so the LLM can also
-                    // infer transaction type. The server validates category IDs.
                     categories: categories.map((c) => ({
                         id: c.id,
                         name: c.name,
@@ -125,12 +153,10 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
             const result: ReceiptAnalysisResult = await response.json()
 
-            // ── Populate form fields ──────────────────────
             setType(result.type)
             setAmountTl(result.amountTl)
             setNote(result.note)
 
-            // Convert YYYY-MM-DD → datetime-local format (YYYY-MM-DDTHH:mm)
             if (result.date) {
                 const dateObj = new Date(`${result.date}T12:00:00`)
                 const localDt = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000)
@@ -139,7 +165,6 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                 setOccurredAt(localDt)
             }
 
-            // ── Category matching ─────────────────────────
             if (result.matched_category_id) {
                 setCategoryId(result.matched_category_id)
                 setTagId('')
@@ -154,7 +179,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
         }
     }
 
-    // ── Quick-create suggested category ────────────────────
+    // ── Quick-create suggested category ──────────────────────
     const handleCreateSuggestedCategory = async () => {
         if (!suggestedCategoryName) return
         setCreatingCategory(true)
@@ -185,20 +210,43 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
         setSubmitting(true)
         try {
-            const txn = await createTransaction({
-                type,
-                amountTl,
-                category_id: categoryId || undefined,
-                tag_id: tagId || undefined,
-                obligation_id: obligationId || undefined,
-                occurred_at: new Date(occurredAt).toISOString(),
-                note: note.trim() || undefined,
-                receiptFile,
-            })
-
-            if (txn) {
-                onSuccess?.(txn)
+            if (isEdit && editingTransaction) {
+                // ── EDIT MODE ──
+                const amountKurus = Math.round(parseFloat(amountTl.replace(',', '.')) * 100)
+                await updateTransactionWithReceipt(
+                    editingTransaction.id,
+                    {
+                        type,
+                        amount: amountKurus,
+                        category_id: categoryId || null,
+                        tag_id: tagId || null,
+                        obligation_id: obligationId || null,
+                        occurred_at: new Date(occurredAt).toISOString(),
+                        note: note.trim() || null,
+                    },
+                    {
+                        newReceiptFile: receiptFile,
+                        removeExistingReceipt,
+                        existingReceiptPath,
+                    }
+                )
                 onClose()
+            } else {
+                // ── CREATE MODE ──
+                const txn = await createTransaction({
+                    type,
+                    amountTl,
+                    category_id: categoryId || undefined,
+                    tag_id: tagId || undefined,
+                    obligation_id: obligationId || undefined,
+                    occurred_at: new Date(occurredAt).toISOString(),
+                    note: note.trim() || undefined,
+                    receiptFile,
+                })
+                if (txn) {
+                    onSuccess?.(txn)
+                    onClose()
+                }
             }
         } finally {
             setSubmitting(false)
@@ -225,7 +273,9 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                        <h2 className="text-lg font-semibold text-white">Yeni İşlem</h2>
+                        <h2 className="text-lg font-semibold text-white">
+                            {isEdit ? 'İşlemi Düzenle' : 'Yeni İşlem'}
+                        </h2>
                         <button
                             onClick={onClose}
                             className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
@@ -234,7 +284,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
                         {/* Type Toggle */}
                         <div className="flex gap-2 p-1 bg-background-elevated rounded-xl">
                             {(['income', 'expense'] as const).map((t) => (
@@ -402,7 +452,32 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                         <div className="space-y-2">
                             <label className="block text-xs font-medium text-text-tertiary">Fiş / Fatura</label>
 
-                            {/* File name display */}
+                            {/* Existing receipt row (edit mode only) */}
+                            {showExistingReceipt && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-background-elevated border border-white/10 rounded-lg">
+                                    <Paperclip className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+                                    <span className="text-text-secondary text-xs flex-1 truncate">Mevcut fiş</span>
+                                    <a
+                                        href={getReceiptUrl(existingReceiptPath!)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 text-text-tertiary hover:text-primary transition-colors"
+                                        title="Görüntüle"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveExistingReceipt}
+                                        className="p-1 text-text-tertiary hover:text-danger transition-colors"
+                                        title="Fişi kaldır"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* New file selected */}
                             {receiptFile && (
                                 <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
                                     <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -417,26 +492,40 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                 </div>
                             )}
 
-                            {/* Upload buttons row */}
-                            <div className="flex gap-2">
+                            {/* Upload buttons */}
+                            {!showExistingReceipt && !receiptFile && (
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 border border-dashed border-white/20 rounded-xl text-text-tertiary hover:text-white hover:border-primary/40 transition-all text-xs"
+                                    >
+                                        <Upload className="w-3.5 h-3.5" />
+                                        <span>Dosya Seç</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => cameraInputRef.current?.click()}
+                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 border border-dashed border-white/20 rounded-xl text-text-tertiary hover:text-white hover:border-primary/40 transition-all text-xs"
+                                    >
+                                        <Camera className="w-3.5 h-3.5" />
+                                        <span>Kamera</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Replace button shown when existing receipt is displayed */}
+                            {showExistingReceipt && (
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 border border-dashed border-white/20 rounded-xl text-text-tertiary hover:text-white hover:border-primary/40 transition-all text-xs"
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-white/20 rounded-xl text-text-tertiary hover:text-white hover:border-primary/40 transition-all text-xs"
                                 >
                                     <Upload className="w-3.5 h-3.5" />
-                                    <span>Dosya Seç</span>
+                                    <span>Fişi değiştir</span>
                                 </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => cameraInputRef.current?.click()}
-                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 border border-dashed border-white/20 rounded-xl text-text-tertiary hover:text-white hover:border-primary/40 transition-all text-xs"
-                                >
-                                    <Camera className="w-3.5 h-3.5" />
-                                    <span>Kamera</span>
-                                </button>
-                            </div>
+                            )}
 
                             {/* Hidden file inputs */}
                             <input
@@ -446,7 +535,6 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                 onChange={handleFileSelect}
                                 className="hidden"
                             />
-                            {/* capture="environment" prompts the rear camera on mobile */}
                             <input
                                 ref={cameraInputRef}
                                 type="file"
@@ -456,7 +544,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                 className="hidden"
                             />
 
-                            {/* AI Scan Button — only visible when a file is selected */}
+                            {/* AI Scan Button */}
                             <AnimatePresence>
                                 {receiptFile && (
                                     <motion.button
@@ -520,7 +608,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                 disabled={submitting}
                                 className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                                {submitting ? 'Kaydediliyor...' : 'Kaydet'}
+                                {submitting ? 'Kaydediliyor...' : isEdit ? 'Güncelle' : 'Kaydet'}
                             </button>
                         </div>
                     </form>

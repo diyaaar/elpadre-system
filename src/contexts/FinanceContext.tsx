@@ -72,7 +72,12 @@ interface FinanceContextType {
         note?: string
         receiptFile?: File | null
     }) => Promise<FinanceTransaction | null>
-    updateTransaction: (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'occurred_at' | 'note'>>) => Promise<void>
+    updateTransaction: (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => Promise<void>
+    updateTransactionWithReceipt: (
+        id: string,
+        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
+        opts?: { newReceiptFile?: File | null; removeExistingReceipt?: boolean; existingReceiptPath?: string | null }
+    ) => Promise<void>
     archiveTransaction: (id: string) => Promise<void>
     deleteTransaction: (id: string, receiptPath?: string | null) => Promise<void>
 
@@ -356,12 +361,52 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     }, [user, showToast])
 
-    const updateTransaction = useCallback(async (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'occurred_at' | 'note'>>) => {
+    const updateTransaction = useCallback(async (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => {
         if (!user) return
         const prev = transactions.find((t) => t.id === id)
         setTransactions((ts) => ts.map((t) => t.id === id ? { ...t, ...updates } : t))
         try {
             const updated = await FinanceService.updateTransaction(user.id, id, updates)
+            setTransactions((ts) => ts.map((t) => t.id === id ? updated : t))
+            showToast('İşlem güncellendi', 'success', 2000)
+        } catch (err) {
+            if (prev) setTransactions((ts) => ts.map((t) => t.id === id ? prev : t))
+            const msg = err instanceof Error ? err.message : 'İşlem güncellenemedi'
+            showToast(msg, 'error')
+        }
+    }, [user, transactions, showToast])
+
+    const updateTransactionWithReceipt = useCallback(async (
+        id: string,
+        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
+        opts?: { newReceiptFile?: File | null; removeExistingReceipt?: boolean; existingReceiptPath?: string | null }
+    ) => {
+        if (!user) return
+        const prev = transactions.find((t) => t.id === id)
+        try {
+            let receiptPath: string | null | undefined = undefined // undefined = don't change
+
+            // Remove old receipt if requested or if replacing
+            if (opts?.removeExistingReceipt || opts?.newReceiptFile) {
+                if (opts?.existingReceiptPath) {
+                    await deleteReceipt(opts.existingReceiptPath)
+                }
+                receiptPath = null // will be overwritten below if new file exists
+            }
+
+            // Upload new receipt if provided
+            if (opts?.newReceiptFile) {
+                const result = await uploadReceipt(opts.newReceiptFile, user.id, id)
+                if (result.error) throw new Error(result.error)
+                receiptPath = result.path
+            }
+
+            const fullUpdates = {
+                ...updates,
+                ...(receiptPath !== undefined ? { receipt_path: receiptPath } : {}),
+            }
+
+            const updated = await FinanceService.updateTransaction(user.id, id, fullUpdates)
             setTransactions((ts) => ts.map((t) => t.id === id ? updated : t))
             showToast('İşlem güncellendi', 'success', 2000)
         } catch (err) {
@@ -579,6 +624,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         deleteTag,
         createTransaction,
         updateTransaction,
+        updateTransactionWithReceipt,
         archiveTransaction,
         deleteTransaction,
         createObligation,
@@ -596,7 +642,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         getDashboardStats,
         createCategory, updateCategory, deleteCategory,
         createTag, deleteTag,
-        createTransaction, updateTransaction, archiveTransaction, deleteTransaction,
+        createTransaction, updateTransaction, updateTransactionWithReceipt, archiveTransaction, deleteTransaction,
         createObligation, updateObligation, closeObligation, deleteObligation, getObligationDetail,
         createRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate,
         getTagsForCategory,
