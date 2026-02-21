@@ -182,7 +182,7 @@ export function BackgroundImageUpload({
                 }`}
             >
               <Upload className="w-4 h-4 inline mr-2" />
-              Dosya Yükle
+              Yükle
             </button>
             <button
               onClick={() => setUploadMethod('url')}
