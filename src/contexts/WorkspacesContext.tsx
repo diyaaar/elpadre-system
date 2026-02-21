@@ -79,7 +79,7 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
 
     try {
       const supabase = getSupabase()
-      
+
       // Check if user has any workspaces
       const { data: existingWorkspaces } = await supabase
         .from('workspaces')
@@ -131,15 +131,26 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
 
     let isMounted = true
 
-    // Initialize: Ensure default workspace exists and fetch workspaces
+    // Initialize: check DB directly, only create default if truly empty
     const initialize = async () => {
-      // First, ensure default workspace exists
-      await ensureDefaultWorkspace()
-      
       if (!isMounted) return
-      
-      // Then fetch workspaces (which will set currentWorkspaceId if not set)
-      await fetchWorkspaces()
+
+      const supabase = getSupabase()
+      const { data: existing } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+
+      if (!isMounted) return
+
+      if (!existing || existing.length === 0) {
+        // Truly no workspaces for this user — create the default once
+        await ensureDefaultWorkspace()
+      } else {
+        // Workspaces exist — just load them
+        await fetchWorkspaces()
+      }
     }
 
     initialize()
@@ -183,7 +194,7 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
 
       try {
         const supabase = getSupabase()
-        
+
         // Get max order
         const { data: existingWorkspaces } = await supabase
           .from('workspaces')
@@ -192,8 +203,8 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
           .order('order', { ascending: false })
           .limit(1)
 
-        const maxOrder = existingWorkspaces && existingWorkspaces.length > 0 
-          ? existingWorkspaces[0].order + 1 
+        const maxOrder = existingWorkspaces && existingWorkspaces.length > 0
+          ? existingWorkspaces[0].order + 1
           : 0
 
         const { data, error: createError } = await supabase
@@ -265,7 +276,7 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
 
       try {
         const supabase = getSupabase()
-        
+
         // Get another workspace to move tasks to
         const { data: otherWorkspace } = await supabase
           .from('workspaces')
@@ -311,7 +322,7 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
     async (workspaceIds: string[]) => {
       try {
         const supabase = getSupabase()
-        
+
         // Update order for each workspace
         const updates = workspaceIds.map((id, index) =>
           supabase
