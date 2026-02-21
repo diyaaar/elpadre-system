@@ -44,7 +44,11 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
     // Pre-populate from editingTransaction if in edit mode
     const initType = editingTransaction?.type ?? presetType ?? 'expense'
-    const initAmountTl = editingTransaction ? (editingTransaction.amount / 100).toFixed(2) : ''
+    const initAmountTl = editingTransaction ? (() => {
+        const [intPart, decPart] = (editingTransaction.amount / 100).toFixed(2).split('.')
+        const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        return `${formattedInt},${decPart}`
+    })() : ''
     const initCategoryId = editingTransaction?.category_id ?? ''
     const initTagId = editingTransaction?.tag_id ?? ''
     const initObligationId = editingTransaction?.obligation_id ?? presetObligationId ?? ''
