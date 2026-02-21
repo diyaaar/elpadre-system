@@ -12,6 +12,7 @@ import type { FinanceTransaction } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
 import { getReceiptUrl } from '../../../lib/financeStorage'
 import { ReceiptViewer } from './ReceiptViewer'
+import { pdfFirstPageToPngBase64 } from '../../../lib/pdfToImage'
 
 interface TransactionFormProps {
     onClose: () => void
@@ -137,22 +138,30 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
         setSuggestedCategoryName(null)
 
         try {
-            const base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = () => {
-                    const result = reader.result as string
-                    resolve(result.split(',')[1])
-                }
-                reader.onerror = () => reject(new Error('Dosya okunamadı'))
-                reader.readAsDataURL(receiptFile)
-            })
+            let base64: string
+            let mimeType: string
+
+            if (receiptFile.type === 'application/pdf') {
+                // PDF: render first page to high-quality PNG via pdf.js (CDN)
+                base64 = await pdfFirstPageToPngBase64(receiptFile)
+                mimeType = 'image/png'
+            } else {
+                // Image: read directly as base64
+                base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onload = () => resolve((reader.result as string).split(',')[1])
+                    reader.onerror = () => reject(new Error('Dosya okunamadı'))
+                    reader.readAsDataURL(receiptFile)
+                })
+                mimeType = receiptFile.type || 'image/jpeg'
+            }
 
             const response = await fetch('/api/finance/analyze-receipt', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     imageBase64: base64,
-                    imageMimeType: receiptFile.type || 'image/jpeg',
+                    imageMimeType: mimeType,
                     categories: categories.map((c) => ({
                         id: c.id,
                         name: c.name,
@@ -173,7 +182,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
             setNote(result.note)
 
             if (result.date) {
-                setDateStr(result.date) // already YYYY-MM-DD
+                setDateStr(result.date)
             }
 
             if (result.matched_category_id) {
@@ -597,7 +606,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                         {isScanning ? (
                                             <>
                                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                                <span>Yapay Zeka İnceliyor...</span>
+                                                <span>{receiptFile?.type === 'application/pdf' ? 'PDF işleniyor...' : 'Yapay Zeka İnceliyor...'}</span>
                                             </>
                                         ) : (
                                             <>
