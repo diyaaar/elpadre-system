@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Trash2, MapPin, AlignLeft, Calendar, Clock, Loader2 } from 'lucide-react'
+import { X, Trash2, AlignLeft, Calendar, Clock, Loader2 } from 'lucide-react'
+import { LocationAutocomplete } from './LocationAutocomplete'
 import { format, addHours } from 'date-fns'
 import { useCalendar, CalendarEvent } from '../../contexts/CalendarContext'
 
@@ -361,17 +362,12 @@ export function EventFormModal({
                                 </div>
                             </div>
 
-                            {/* Location */}
-                            <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Konum ekle"
-                                    value={location}
-                                    onChange={e => setLocation(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 pl-9 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/60 transition-all"
-                                />
-                            </div>
+                            {/* Location — OSM/Nominatim autocomplete (no paid API) */}
+                            <LocationAutocomplete
+                                value={location}
+                                onChange={setLocation}
+                                placeholder="Konum ekle"
+                            />
 
                             {/* Description */}
                             <div className="relative">
