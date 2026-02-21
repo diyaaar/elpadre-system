@@ -57,19 +57,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1'
       }
 
       const htmlRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(q)}&iax=images&ia=images`, { headers })
       const html = await htmlRes.text()
-      const match = html.match(/vqd="([^"]+)"/)
 
-      if (!match) return res.status(500).json({ error: 'Failed to obtain duckduckgo token' })
+      // More robust regex for vqd extraction
+      const match = html.match(/vqd[=:'"]+([^"'\s&]+)/i)
+
+      if (!match) {
+        console.error('Failed to obtain duckduckgo token. HTML snippet:', html.substring(0, 500))
+        // Return empty results rather than crashing, to avoid 500 on frontend
+        return res.status(200).json({ results: [] })
+      }
+
       const vqd = match[1]
 
       const searchRes = await fetch(`https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(q)}&vqd=${vqd}&f=,,,,,&p=1`, {
-        headers: { ...headers, 'Referer': 'https://duckduckgo.com/' }
+        headers: {
+          ...headers,
+          'Referer': 'https://duckduckgo.com/',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-origin'
+        }
       })
+
       const data = await searchRes.json()
 
       const results = (data.results || []).slice(0, 30).map((r: any) => ({
@@ -81,7 +106,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ results })
     } catch (err: any) {
       console.error('Image search error:', err)
-      return res.status(500).json({ error: 'Image search failed', details: err.message })
+      // Return empty results instead of 500 to keep UI graceful
+      return res.status(200).json({ results: [] })
     }
   }
 
