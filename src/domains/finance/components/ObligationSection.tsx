@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useState } from 'react'
-import { Plus, X, Check, CreditCard, HandIcon } from 'lucide-react'
+import { Plus, X, Check, CreditCard, HandIcon, Pencil, Undo } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
 import { formatCurrency } from '../types/finance.types'
@@ -17,7 +17,9 @@ export function ObligationSection() {
     const {
         obligations,
         createObligation,
+        updateObligation,
         closeObligation,
+        reopenObligation,
         deleteObligation,
         getObligationDetail,
     } = useFinance()
@@ -36,6 +38,13 @@ export function ObligationSection() {
     const [formDeadline, setFormDeadline] = useState('')
     const [formCounterparty, setFormCounterparty] = useState('')
     const [formSubmitting, setFormSubmitting] = useState(false)
+
+    // Edit obligation form state
+    const [showEditForm, setShowEditForm] = useState(false)
+    const [editDesc, setEditDesc] = useState('')
+    const [editDeadline, setEditDeadline] = useState('')
+    const [editCounterparty, setEditCounterparty] = useState('')
+    const [editSubmitting, setEditSubmitting] = useState(false)
 
     const filtered = obligations.filter(
         (o) => o.type === activeTab && (showClosed ? true : !o.is_closed)
@@ -67,6 +76,30 @@ export function ObligationSection() {
             setFormDeadline('')
             setFormCounterparty('')
         }
+    }
+
+    const handleOpenEdit = () => {
+        if (!detail) return
+        setEditDesc(detail.description)
+        setEditDeadline(detail.deadline ?? '')
+        setEditCounterparty(detail.counterparty ?? '')
+        setShowEditForm(true)
+    }
+
+    const handleUpdateObligation = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        if (!detail || !editDesc) return
+        setEditSubmitting(true)
+        await updateObligation(detail.id, {
+            description: editDesc,
+            deadline: editDeadline || undefined,
+            counterparty: editCounterparty || undefined,
+        })
+        setEditSubmitting(false)
+        setShowEditForm(false)
+        // Refresh detail
+        const refreshed = await getObligationDetail(detail.id)
+        setDetail(refreshed)
     }
 
     return (
@@ -256,9 +289,20 @@ export function ObligationSection() {
                                                 <h2 className="text-lg font-semibold text-white">{detail.description}</h2>
                                                 {detail.counterparty && <p className="text-xs text-text-tertiary">{detail.counterparty}</p>}
                                             </div>
-                                            <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-all">
-                                                <X className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center gap-1.5">
+                                                {!detail.is_closed && (
+                                                    <button
+                                                        onClick={handleOpenEdit}
+                                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
+                                                        title="Düzenle"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button onClick={() => { setDetail(null); setShowEditForm(false) }} className="p-1.5 rounded-lg text-danger/50 hover:text-danger hover:bg-danger/10 transition-all">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="p-6 space-y-5">
                                             {/* Derived remaining amount — NEVER from stored field */}
@@ -282,6 +326,67 @@ export function ObligationSection() {
                                                     <span className="text-warning">Kalan: {formatCurrency(detail.remaining_amount)}</span>
                                                 </div>
                                             </div>
+
+                                            {/* Edit Form */}
+                                            <AnimatePresence>
+                                                {showEditForm && (
+                                                    <motion.form
+                                                        onSubmit={handleUpdateObligation}
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="p-4 bg-background-elevated/60 border border-white/8 rounded-xl space-y-3">
+                                                            <p className="text-xs font-medium text-text-tertiary">Yükümlülüğü Düzenle</p>
+                                                            <div>
+                                                                <label className="text-xs text-text-tertiary mb-1 block">Açıklama *</label>
+                                                                <input
+                                                                    value={editDesc}
+                                                                    onChange={(e) => setEditDesc(e.target.value)}
+                                                                    required
+                                                                    className="w-full px-3 py-2 bg-background-secondary border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                                />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div>
+                                                                    <label className="text-xs text-text-tertiary mb-1 block">Karşı Taraf</label>
+                                                                    <input
+                                                                        value={editCounterparty}
+                                                                        onChange={(e) => setEditCounterparty(e.target.value)}
+                                                                        className="w-full px-3 py-2 bg-background-secondary border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="text-xs text-text-tertiary mb-1 block">Son Ödeme Tarihi</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={editDeadline}
+                                                                        onChange={(e) => setEditDeadline(e.target.value)}
+                                                                        className="w-full px-3 py-2 bg-background-secondary border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-2 pt-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowEditForm(false)}
+                                                                    className="flex-1 py-1.5 text-xs text-text-secondary bg-background-secondary rounded-lg border border-white/5 transition-all"
+                                                                >
+                                                                    İptal
+                                                                </button>
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={editSubmitting}
+                                                                    className="flex-1 py-1.5 text-xs font-medium text-white bg-primary rounded-lg disabled:opacity-60 transition-all"
+                                                                >
+                                                                    {editSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </motion.form>
+                                                )}
+                                            </AnimatePresence>
 
                                             {/* Payment history */}
                                             <div>
@@ -310,20 +415,30 @@ export function ObligationSection() {
                                             </div>
 
                                             {/* Actions */}
-                                            {!detail.is_closed && (
-                                                <div className="flex gap-3">
+                                            {!detail.is_closed ? (
+                                                <div className="flex gap-2">
                                                     <button
                                                         onClick={async () => { await closeObligation(detail.id); setDetail(null) }}
-                                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-success/20 hover:bg-success/30 text-success border border-success/30 rounded-xl text-sm font-medium transition-all"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-success/20 hover:bg-success/30 text-success border border-success/30 rounded-xl text-xs font-medium transition-all"
                                                     >
-                                                        <Check className="w-4 h-4" />
+                                                        <Check className="w-3.5 h-3.5" />
                                                         Borcu Kapat
                                                     </button>
                                                     <button
                                                         onClick={async () => { await deleteObligation(detail.id); setDetail(null) }}
-                                                        className="flex-1 py-2.5 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-sm transition-all"
+                                                        className="px-3 py-2 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-xs transition-all"
                                                     >
                                                         Borcu Sil
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={async () => { await reopenObligation(detail.id); setDetail(null) }}
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-warning/20 hover:bg-warning/30 text-warning border border-warning/30 rounded-xl text-xs font-medium transition-all"
+                                                    >
+                                                        <Undo className="w-3.5 h-3.5" />
+                                                        Tekrar Aç
                                                     </button>
                                                 </div>
                                             )}

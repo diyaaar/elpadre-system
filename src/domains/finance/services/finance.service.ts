@@ -244,7 +244,7 @@ export async function createTransaction(
 export async function updateTransaction(
     userId: string,
     id: string,
-    updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'occurred_at' | 'note' | 'receipt_path'>>
+    updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'currency' | 'category_id' | 'tag_id' | 'occurred_at' | 'note' | 'receipt_path'>>
 ): Promise<FinanceTransaction> {
     if (updates.amount !== undefined && (!Number.isInteger(updates.amount) || updates.amount <= 0)) {
         throw new Error('amount must be a positive integer (kuruş)')
@@ -504,6 +504,17 @@ export async function closeObligation(userId: string, id: string): Promise<void>
     const { error } = await supabase
         .from('finance_obligations')
         .update({ is_closed: true, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', userId)
+
+    if (error) throw error
+}
+
+export async function reopenObligation(userId: string, id: string): Promise<void> {
+    const supabase = getSupabase()
+    const { error } = await supabase
+        .from('finance_obligations')
+        .update({ is_closed: false, updated_at: new Date().toISOString() })
         .eq('id', id)
         .eq('user_id', userId)
 

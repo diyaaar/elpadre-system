@@ -4,7 +4,7 @@
 // AI Receipt Auto-Fill: gpt-4o-mini via /api/finance/analyze-receipt
 // ============================================================
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { X, TrendingUp, TrendingDown, Upload, Paperclip, Camera, Sparkles, Loader2, AlertTriangle, Plus, ExternalLink, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFinance } from '../../../contexts/FinanceContext'
@@ -65,6 +65,11 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
 
     const [type, setType] = useState<'income' | 'expense'>(initType)
     const [amountTl, setAmountTl] = useState(initAmountTl)
+    const [currency, setCurrency] = useState<'TRY' | 'USD' | 'EUR'>(
+        (editingTransaction?.currency as 'TRY' | 'USD' | 'EUR') ?? 'TRY'
+    )
+    const [exchangeRates, setExchangeRates] = useState<{ USD: number; EUR: number } | null>(null)
+    const [ratesLoading, setRatesLoading] = useState(false)
     const [categoryId, setCategoryId] = useState(initCategoryId)
     const [tagId, setTagId] = useState(initTagId)
     const [obligationId, setObligationId] = useState(initObligationId)
@@ -89,6 +94,22 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
     const fileInputRef = useRef<HTMLInputElement>(null)
     const cameraInputRef = useRef<HTMLInputElement>(null)
     const timeInputRef = useRef<HTMLInputElement>(null)
+
+    // Fetch exchange rates on mount (non-blocking)
+    useEffect(() => {
+        setRatesLoading(true)
+        fetch('/api/finance/exchange-rates')
+            .then((r) => r.json())
+            .then((data) => {
+                if (data?.rates?.USD && data?.rates?.EUR) {
+                    setExchangeRates({ USD: data.rates.USD, EUR: data.rates.EUR })
+                }
+            })
+            .catch(() => { /* silently ignore — form works without rates */ })
+            .finally(() => setRatesLoading(false))
+    }, [])
+
+    const currencySymbol = currency === 'TRY' ? '₺' : currency === 'USD' ? '$' : '€'
 
     // Combine date+time into ISO string for submission
     const buildOccurredAt = useCallback(() => {
@@ -243,6 +264,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                     {
                         type,
                         amount: amountKurus,
+                        currency,
                         category_id: categoryId || null,
                         tag_id: tagId || null,
                         obligation_id: obligationId || null,
@@ -261,6 +283,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                 const txn = await createTransaction({
                     type,
                     amountTl: rawAmount,
+                    currency,
                     category_id: categoryId || undefined,
                     tag_id: tagId || undefined,
                     obligation_id: obligationId || undefined,
@@ -333,31 +356,70 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                             ))}
                         </div>
 
-                        {/* Amount */}
+                        {/* Amount + Currency */}
                         <div>
-                            <label className="block text-xs font-medium text-text-tertiary mb-1.5">Tutar (₺)</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary font-medium">₺</span>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={amountTl}
-                                    onChange={(e) => {
-                                        // Strip existing dots (thousand separators), allow comma/dot as decimal
-                                        const raw = e.target.value.replace(/[^0-9.,]/g, '')
-                                        // Format: separate integer part with dots every 3 digits
-                                        const parts = raw.replace(/\./g, '').split(',')
-                                        const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-                                        const formatted = parts.length > 1
-                                            ? `${intPart},${parts[1].slice(0, 2)}`
-                                            : intPart
-                                        setAmountTl(formatted)
-                                    }}
-                                    placeholder="0,00"
-                                    required
-                                    className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all text-lg font-semibold"
-                                />
+                            <label className="block text-xs font-medium text-text-tertiary mb-1.5">Tutar</label>
+                            <div className="flex gap-2">
+                                {/* Amount input */}
+                                <div className="relative flex-1">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary font-medium">{currencySymbol}</span>
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={amountTl}
+                                        onChange={(e) => {
+                                            const raw = e.target.value.replace(/[^0-9.,]/g, '')
+                                            const parts = raw.replace(/\./g, '').split(',')
+                                            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                                            const formatted = parts.length > 1
+                                                ? `${intPart},${parts[1].slice(0, 2)}`
+                                                : intPart
+                                            setAmountTl(formatted)
+                                        }}
+                                        placeholder="0,00"
+                                        required
+                                        className="w-full pl-8 pr-4 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all text-lg font-semibold"
+                                    />
+                                </div>
+
+                                {/* Currency selector */}
+                                <div className="flex gap-1 p-1 bg-background-elevated border border-white/10 rounded-xl">
+                                    {(['TRY', 'USD', 'EUR'] as const).map((c) => (
+                                        <button
+                                            key={c}
+                                            type="button"
+                                            onClick={() => setCurrency(c)}
+                                            className={`
+                                                px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150
+                                                ${currency === c
+                                                    ? 'bg-primary/20 text-primary border border-primary/30'
+                                                    : 'text-text-tertiary hover:text-text-primary'
+                                                }
+                                            `}
+                                        >
+                                            {c === 'TRY' ? '₺ TL' : c === 'USD' ? '$ USD' : '€ EUR'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Exchange rate badge */}
+                            {currency !== 'TRY' && (
+                                <div className="mt-1.5 flex items-center gap-1.5">
+                                    {ratesLoading ? (
+                                        <span className="text-xs text-text-tertiary animate-pulse">Kur yükleniyor...</span>
+                                    ) : exchangeRates ? (
+                                        <span className="text-xs text-text-tertiary">
+                                            1 {currency} ≈{' '}
+                                            <span className="text-text-secondary font-medium">
+                                                {exchangeRates[currency].toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-text-tertiary opacity-50">Kur bilgisi alınamadı</span>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

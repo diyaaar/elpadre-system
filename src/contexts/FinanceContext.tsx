@@ -72,10 +72,10 @@ interface FinanceContextType {
         note?: string
         receiptFile?: File | null
     }) => Promise<FinanceTransaction | null>
-    updateTransaction: (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => Promise<void>
+    updateTransaction: (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'currency' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => Promise<void>
     updateTransactionWithReceipt: (
         id: string,
-        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
+        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'currency' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
         opts?: { newReceiptFile?: File | null; removeExistingReceipt?: boolean; existingReceiptPath?: string | null }
     ) => Promise<void>
     archiveTransaction: (id: string) => Promise<void>
@@ -94,6 +94,7 @@ interface FinanceContextType {
     }) => Promise<FinanceObligation | null>
     updateObligation: (id: string, updates: Partial<Pick<FinanceObligation, 'description' | 'counterparty' | 'deadline' | 'reminder_days'>>) => Promise<void>
     closeObligation: (id: string) => Promise<void>
+    reopenObligation: (id: string) => Promise<void>
     deleteObligation: (id: string) => Promise<void>
     getObligationDetail: (id: string) => Promise<ObligationWithDerived | null>
 
@@ -361,7 +362,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     }, [user, showToast])
 
-    const updateTransaction = useCallback(async (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => {
+    const updateTransaction = useCallback(async (id: string, updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'currency' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note' | 'receipt_path'>>) => {
         if (!user) return
         const prev = transactions.find((t) => t.id === id)
         setTransactions((ts) => ts.map((t) => t.id === id ? { ...t, ...updates } : t))
@@ -378,7 +379,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     const updateTransactionWithReceipt = useCallback(async (
         id: string,
-        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
+        updates: Partial<Pick<FinanceTransaction, 'type' | 'amount' | 'currency' | 'category_id' | 'tag_id' | 'obligation_id' | 'occurred_at' | 'note'>>,
         opts?: { newReceiptFile?: File | null; removeExistingReceipt?: boolean; existingReceiptPath?: string | null }
     ) => {
         if (!user) return
@@ -510,6 +511,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     }, [user, showToast])
 
+    const reopenObligation = useCallback(async (id: string) => {
+        if (!user) return
+        setObligations((obs) => obs.map((o) => o.id === id ? { ...o, is_closed: false } : o))
+        try {
+            await FinanceService.reopenObligation(user.id, id)
+            showToast('Yükümlülük tekrar açıldı', 'success', 2000)
+        } catch (err) {
+            setObligations((obs) => obs.map((o) => o.id === id ? { ...o, is_closed: true } : o))
+            const msg = err instanceof Error ? err.message : 'Yükümlülük tekrar açılamadı'
+            showToast(msg, 'error')
+        }
+    }, [user, showToast])
+
     const deleteObligation = useCallback(async (id: string) => {
         if (!user) return
         const snapshot = obligations.find((o) => o.id === id)
@@ -630,6 +644,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         createObligation,
         updateObligation,
         closeObligation,
+        reopenObligation,
         deleteObligation,
         getObligationDetail,
         createRecurringTemplate,
@@ -643,7 +658,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         createCategory, updateCategory, deleteCategory,
         createTag, deleteTag,
         createTransaction, updateTransaction, updateTransactionWithReceipt, archiveTransaction, deleteTransaction,
-        createObligation, updateObligation, closeObligation, deleteObligation, getObligationDetail,
+        createObligation, updateObligation, closeObligation, reopenObligation, deleteObligation, getObligationDetail,
         createRecurringTemplate, generateTransactionFromTemplate, deleteRecurringTemplate,
         getTagsForCategory,
     ])
