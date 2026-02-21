@@ -142,7 +142,6 @@ export function Task({ task, depth = 0 }: TaskProps) {
           filter: `task_id=eq.${task.id}`,
         },
         (payload) => {
-          console.log('[Realtime] Task tag change for task:', task.id, payload)
           // Refresh tags when task_tags change
           getTaskTags(task.id).then(setTaskTags)
         }

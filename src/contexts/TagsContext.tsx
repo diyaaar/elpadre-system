@@ -58,12 +58,10 @@ export function TagsProvider({ children }: { children: ReactNode }) {
   // Subscribe to tag changes
   useEffect(() => {
     if (!user?.id) {
-      console.log('[Realtime] No user, skipping tags subscription')
       return
     }
 
     const userId = user.id
-    console.log('[Realtime] Setting up tags subscription for user:', userId)
     
     // Initial fetch
     fetchTags()
@@ -111,9 +109,7 @@ export function TagsProvider({ children }: { children: ReactNode }) {
         }
       )
       .subscribe((status) => {
-        console.log('[Realtime] Tags subscription status:', status)
         if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] ✓ Successfully subscribed to tags and task_tags changes')
         } else if (status === 'CHANNEL_ERROR') {
           console.error('[Realtime] ✗ Channel error - check Supabase Replication settings')
         } else if (status === 'TIMED_OUT') {
@@ -124,7 +120,6 @@ export function TagsProvider({ children }: { children: ReactNode }) {
       })
 
     return () => {
-      console.log('[Realtime] Cleaning up tags subscription')
       supabase.removeChannel(channel)
     }
     // Only depend on user.id to prevent unnecessary re-subscriptions

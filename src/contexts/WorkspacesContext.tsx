@@ -56,7 +56,6 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
         setCurrentWorkspaceId((prevId) => {
           // If no workspace is selected, or current one doesn't exist, select the first one
           if (!prevId || !fetchedWorkspaces.find((w) => w.id === prevId)) {
-            console.log('[WorkspacesContext] Setting current workspace to:', fetchedWorkspaces[0].id)
             return fetchedWorkspaces[0].id
           }
           return prevId
@@ -169,14 +168,12 @@ export function WorkspacesProvider({ children }: { children: ReactNode }) {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[Realtime] Workspace change received:', payload)
           if (isMounted) {
             fetchWorkspaces()
           }
         }
       )
       .subscribe((status) => {
-        console.log('[Realtime] Workspaces subscription status:', status)
       })
 
     return () => {
