@@ -12,6 +12,7 @@ import type { FinanceTransaction } from '../types/finance.types'
 import { TransactionForm } from './TransactionForm'
 import { getReceiptUrl } from '../../../lib/financeStorage'
 import { Portal } from '../../../components/Portal'
+import { ReceiptViewer } from './ReceiptViewer'
 
 export function TransactionSection() {
     const {
@@ -27,6 +28,7 @@ export function TransactionSection() {
     const [showForm, setShowForm] = useState(false)
     const [editingTransaction, setEditingTransaction] = useState<FinanceTransaction | null>(null)
     const [activeTransaction, setActiveTransaction] = useState<FinanceTransaction | null>(null)
+    const [viewingReceipt, setViewingReceipt] = useState<string | null>(null)
     const [showFilters, setShowFilters] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -292,15 +294,13 @@ export function TransactionSection() {
                                     {/* Actions */}
                                     <div className="p-3 space-y-1.5">
                                         {txn.receipt_path && (
-                                            <a
-                                                href={getReceiptUrl(txn.receipt_path)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                onClick={() => setViewingReceipt(getReceiptUrl(txn.receipt_path!))}
                                                 className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-all text-sm"
                                             >
                                                 <ExternalLink className="w-4 h-4 shrink-0" />
                                                 Fişi Görüntüle
-                                            </a>
+                                            </button>
                                         )}
                                         <button
                                             onClick={() => handleEdit(txn)}
@@ -346,6 +346,12 @@ export function TransactionSection() {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Receipt Viewer Modal */}
+            <ReceiptViewer
+                url={viewingReceipt}
+                onClose={() => setViewingReceipt(null)}
+            />
         </div>
     )
 }

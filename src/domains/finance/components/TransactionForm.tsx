@@ -11,6 +11,7 @@ import { useFinance } from '../../../contexts/FinanceContext'
 import type { FinanceTransaction } from '../types/finance.types'
 import { Portal } from '../../../components/Portal'
 import { getReceiptUrl } from '../../../lib/financeStorage'
+import { ReceiptViewer } from './ReceiptViewer'
 
 interface TransactionFormProps {
     onClose: () => void
@@ -71,6 +72,7 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
     const [removeExistingReceipt, setRemoveExistingReceipt] = useState(false)
 
     const [submitting, setSubmitting] = useState(false)
+    const [viewingReceipt, setViewingReceipt] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     // AI scan state
@@ -490,15 +492,14 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                                 <div className="flex items-center gap-2 px-3 py-2 bg-background-elevated border border-white/10 rounded-lg">
                                     <Paperclip className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
                                     <span className="text-text-secondary text-xs flex-1 truncate">Mevcut fiş</span>
-                                    <a
-                                        href={getReceiptUrl(existingReceiptPath!)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 text-text-tertiary hover:text-primary transition-colors"
-                                        title="Görüntüle"
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewingReceipt(getReceiptUrl(editingTransaction.receipt_path!))}
+                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors text-xs"
                                     >
+                                        Görüntüle
                                         <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={handleRemoveExistingReceipt}
@@ -647,6 +648,12 @@ export function TransactionForm({ onClose, onSuccess, presetType, presetObligati
                     </form>
                 </motion.div>
             </motion.div>
+
+            {/* Receipt Viewer Modal */}
+            <ReceiptViewer
+                url={viewingReceipt}
+                onClose={() => setViewingReceipt(null)}
+            />
         </Portal>
     )
 }
