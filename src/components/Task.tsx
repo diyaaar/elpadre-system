@@ -255,17 +255,23 @@ export function Task({ task, depth = 0 }: TaskProps) {
   const handleAddToCalendar = async () => {
     setIsAddingToCalendar(true)
     try {
-      // Format date as ISO 8601
-      // If task has a deadline, use it; otherwise use current date/time
+      // To preserve local time and avoid Google Calendar treating it as UTC (which causes a 3hr offset in Turkey timezone),
+      // we format the local date as an ISO-like string WITHOUT the 'Z' suffix.
       let dateString: string
+
+      const getLocalIsoString = (date: Date) => {
+        const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+        const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, -1);
+        return localISOTime;
+      }
+
       if (task.deadline) {
-        // Ensure the deadline is in ISO 8601 format
         const deadlineDate = new Date(task.deadline)
-        dateString = deadlineDate.toISOString()
+        dateString = getLocalIsoString(deadlineDate)
       } else {
         const now = new Date()
         const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
-        dateString = oneHourLater.toISOString()
+        dateString = getLocalIsoString(oneHourLater)
       }
 
       // Get color from task's color_id (preferred) or workspace color (fallback)
@@ -297,11 +303,13 @@ export function Task({ task, depth = 0 }: TaskProps) {
       }
 
       const endDate = new Date(new Date(dateString).getTime() + 60 * 60 * 1000) // 1 hour duration
+      const endDateString = getLocalIsoString(endDate)
+
       const event = await createEvent({
         summary: task.title,
         description: task.description || '',
         start: dateString,
-        end: endDate.toISOString(),
+        end: endDateString,
         color: taskColor,
         colorId: colorId,
       })

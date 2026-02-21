@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { TagInput, TagOption } from './TagInput'
 import { useTags } from '../contexts/TagsContext'
 import { TaskFilter } from '../types/task'
+import { TagManagementModal } from './TagManagementModal'
+import { Settings2 } from 'lucide-react'
 
 export function TaskFilters() {
   const {
@@ -18,6 +20,7 @@ export function TaskFilters() {
 
   const { tags } = useTags() // Available tags
   const [showFilters, setShowFilters] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
 
   // Map tag IDs to Tag objects for TagInput compatibility
   const selectedTagObjects: TagOption[] = selectedTagIds.map(tagId => {
@@ -106,7 +109,16 @@ export function TaskFilters() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 flex-[2] min-w-[250px]">
-                  <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Etiketler</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Etiketler</label>
+                    <button
+                      onClick={() => setIsTagModalOpen(true)}
+                      className="flex items-center gap-1 text-[10px] text-primary hover:text-primary-light transition-colors font-medium px-1.5 py-0.5 rounded-md hover:bg-primary/10"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                      Yönet
+                    </button>
+                  </div>
                   <TagInput
                     selectedTags={selectedTagObjects}
                     onTagsChange={(newTags: TagOption[]) => setSelectedTagIds(newTags.map((t: TagOption) => t.id))}
@@ -132,6 +144,12 @@ export function TaskFilters() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tag Management Modal */}
+      <TagManagementModal
+        isOpen={isTagModalOpen}
+        onClose={() => setIsTagModalOpen(false)}
+      />
     </div>
   )
 }

@@ -125,7 +125,7 @@ export function TagInput({
                                 onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag.id); }}
                                 className="hover:bg-white/10 rounded-full p-0.5 ml-0.5 transition-colors"
                             >
-                                <X className="w-3 h-3 opacity-50 group-hover:opacity-100" />
+                                <X className="w-3 h-3 opacity-80 hover:opacity-100" />
                             </button>
                         </motion.span>
                     ))}
