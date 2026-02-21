@@ -98,7 +98,15 @@ export function TagInput({
         <div className={`relative ${className}`} ref={containerRef}>
             <div
                 className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white/[0.03] border border-white/10 rounded-xl focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/30 transition-all cursor-text min-h-[42px]"
-                onClick={() => inputRef.current?.focus()}
+                onClick={() => {
+                    if (isOpen) {
+                        setIsOpen(false)
+                        inputRef.current?.blur()
+                    } else {
+                        setIsOpen(true)
+                        inputRef.current?.focus()
+                    }
+                }}
             >
                 <AnimatePresence>
                     {selectedTags.map(tag => (
@@ -128,7 +136,14 @@ export function TagInput({
                     type="text"
                     value={inputValue}
                     onChange={(e) => { setInputValue(e.target.value); setIsOpen(true); }}
-                    onFocus={() => setIsOpen(true)}
+                    onFocus={(e) => {
+                        // Avoid immediate toggle issues if clicked while not focused
+                        setIsOpen(true)
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        setIsOpen(true)
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder={selectedTags.length === 0 ? placeholder : ""}
                     className="flex-1 bg-transparent border-none p-1 text-sm text-text-primary placeholder:text-text-tertiary focus:ring-0 min-w-[80px]"

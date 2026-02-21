@@ -159,7 +159,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
     >
       <div className="p-3 space-y-3">
         {/* Title & Description Input Container */}
-        <div className="bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 flex items-start gap-3 transition-colors focus-within:border-primary/30 focus-within:bg-white/[0.05]">
+        <div className="bg-white/[0.04] border border-white/20 rounded-xl px-3 py-2.5 flex items-start gap-3 transition-colors focus-within:border-primary/40 focus-within:bg-white/[0.06]">
           <div className="mt-1 flex-shrink-0">
             <div className="w-3.5 h-3.5 rounded-full border-2 border-primary/40" />
           </div>
