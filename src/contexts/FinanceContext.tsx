@@ -111,6 +111,7 @@ interface FinanceContextType {
         note?: string
         frequency: RecurringFrequency
         next_occurrence: string
+        end_date?: string
     }) => Promise<RecurringTemplate | null>
     updateRecurringTemplate: (id: string, updates: Partial<{
         type: 'income' | 'expense'
@@ -122,6 +123,7 @@ interface FinanceContextType {
         note: string | null
         frequency: RecurringFrequency
         next_occurrence: string
+        end_date: string | null
         is_active: boolean
     }>) => Promise<RecurringTemplate | null>
     generateTransactionFromTemplate: (templateId: string) => Promise<FinanceTransaction | null>
