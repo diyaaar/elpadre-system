@@ -17,14 +17,10 @@ export function LoginPage() {
     return await signIn(email, password)
   }
 
-  const handleToggleMode = () => {
-    navigate('/signup')
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <AuthForm mode="login" onSubmit={handleSignIn} onToggleMode={handleToggleMode} />
+        <AuthForm mode="login" onSubmit={handleSignIn} />
       </div>
     </div>
   )

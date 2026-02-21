@@ -11,7 +11,6 @@ import { FinanceProvider } from './contexts/FinanceContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
-import { SignUpPage } from './pages/SignUpPage'
 import { HomePage } from './pages/HomePage'
 import { ConfigError } from './components/ConfigError'
 import { initializationError } from './lib/supabase'
@@ -29,7 +28,6 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
               <Route
                 path="/"
                 element={

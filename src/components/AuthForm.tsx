@@ -4,7 +4,7 @@ import { Mail, Lock, Loader2 } from 'lucide-react'
 interface AuthFormProps {
   mode: 'login' | 'signup'
   onSubmit: (email: string, password: string) => Promise<{ error: any }>
-  onToggleMode: () => void
+  onToggleMode?: () => void
 }
 
 export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
@@ -114,19 +114,8 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
         )}
       </button>
 
-      <div className="text-center text-text-tertiary">
-        {mode === 'login' ? (
-          <p>
-            Hesabınız yok mu?{' '}
-            <button
-              type="button"
-              onClick={onToggleMode}
-              className="text-primary hover:text-primary-light font-medium"
-            >
-              Kayıt ol
-            </button>
-          </p>
-        ) : (
+      {onToggleMode && mode === 'signup' && (
+        <div className="text-center text-text-tertiary">
           <p>
             Zaten hesabınız var mı?{' '}
             <button
@@ -137,8 +126,8 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
               Giriş yap
             </button>
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </form>
   )
 }
