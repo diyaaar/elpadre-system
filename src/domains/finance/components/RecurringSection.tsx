@@ -25,6 +25,7 @@ export function RecurringSection() {
     const [formCategoryId, setFormCategoryId] = useState('')
     const [formFrequency, setFormFrequency] = useState<'monthly' | 'yearly'>('monthly')
     const [formNextOccurrence, setFormNextOccurrence] = useState(new Date().toISOString().slice(0, 10))
+    const [formEndDate, setFormEndDate] = useState('')
     const [submitting, setSubmitting] = useState(false)
 
     const today = new Date().toISOString().slice(0, 10)
@@ -40,6 +41,7 @@ export function RecurringSection() {
         setFormCategoryId(tmpl.category_id || '')
         setFormFrequency(tmpl.frequency)
         setFormNextOccurrence(tmpl.next_occurrence)
+        setFormEndDate(tmpl.end_date || '')
         setShowForm(true)
     }
 
@@ -69,6 +71,7 @@ export function RecurringSection() {
                 name: formName,
                 frequency: formFrequency,
                 next_occurrence: formNextOccurrence,
+                end_date: formEndDate || null,
             })
         } else {
             result = await createRecurringTemplate({
@@ -78,6 +81,7 @@ export function RecurringSection() {
                 name: formName,
                 frequency: formFrequency,
                 next_occurrence: formNextOccurrence,
+                end_date: formEndDate || undefined,
             })
         }
 
@@ -87,6 +91,7 @@ export function RecurringSection() {
             setFormName('')
             setFormAmount('')
             setFormCategoryId('')
+            setFormEndDate('')
             setEditingTemplateId(null)
         }
     }
@@ -106,6 +111,7 @@ export function RecurringSection() {
                         // Ensure we always default to the exact local YYYY-MM-DD string safely
                         d.setDate(d.getDate() + 1)
                         setFormNextOccurrence(d.toISOString().slice(0, 10))
+                        setFormEndDate('')
                         setShowForm(true)
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/25 transition-all text-sm font-medium"
@@ -129,7 +135,7 @@ export function RecurringSection() {
                                 key={tmpl.id}
                                 layout
                                 className={`
-                  group flex items-center gap-4 p-4 rounded-xl border transition-all
+                  group flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-3 p-4 rounded-xl border transition-all
                   ${overdue || due
                                         ? 'bg-warning/5 border-warning/20'
                                         : 'bg-background-elevated border-white/5 hover:border-white/10'
@@ -152,6 +158,7 @@ export function RecurringSection() {
                                     </div>
                                     <p className="text-xs text-text-tertiary mt-0.5">
                                         {tmpl.frequency === 'monthly' ? 'Aylık' : 'Yıllık'} · Sonraki: {new Date(tmpl.next_occurrence).toLocaleDateString('tr-TR')}
+                                        {tmpl.end_date && ` · Bitiş: ${new Date(tmpl.end_date).toLocaleDateString('tr-TR')}`}
                                     </p>
                                 </div>
 
@@ -159,7 +166,7 @@ export function RecurringSection() {
                                     {tmpl.type === 'income' ? '+' : '-'}{formatCurrency(tmpl.amount)}
                                 </span>
 
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-full sm:w-auto flex items-center justify-end gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-white/5 sm:pt-0 sm:border-0 mt-1 sm:mt-0">
                                     <button
                                         onClick={() => handleGenerate(tmpl.id)}
                                         disabled={generatingId === tmpl.id}
@@ -170,14 +177,14 @@ export function RecurringSection() {
                                     </button>
                                     <button
                                         onClick={() => handleEdit(tmpl)}
-                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 transition-all"
+                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
                                     >
                                         <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(tmpl.id)}
                                         disabled={deletingId === tmpl.id}
-                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all disabled:opacity-50"
+                                        className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/20 transition-all disabled:opacity-50"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -254,10 +261,18 @@ export function RecurringSection() {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="text-xs text-text-tertiary mb-1 block">İlk Tarih</label>
-                                        <input type="date" value={formNextOccurrence} onChange={(e) => setFormNextOccurrence(e.target.value)}
-                                            className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-text-tertiary mb-1 block">İlk Tarih</label>
+                                            <input type="date" value={formNextOccurrence} onChange={(e) => setFormNextOccurrence(e.target.value)}
+                                                className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-text-tertiary mb-1 block">Bitiş (Opsiyonel)</label>
+                                            <input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)}
+                                                min={formNextOccurrence}
+                                                className="w-full px-3 py-2.5 bg-background-elevated border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                                        </div>
                                     </div>
 
                                     <div className="flex gap-3 pt-1">

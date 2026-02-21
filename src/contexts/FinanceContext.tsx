@@ -30,6 +30,7 @@ import type {
 import { tlToKurus } from '../domains/finance/types/finance.types'
 import * as FinanceService from '../domains/finance/services/finance.service'
 import { uploadReceipt, deleteReceipt } from '../lib/financeStorage'
+import { getSupabaseClient } from '../lib/supabase'
 
 // ──────────────────────────────────────────────
 // Context interface
@@ -160,7 +161,39 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         includeArchived: false,
     })
 
-    // ── Load all finance data on user change ──
+    // ── Load all finance data ──
+    const loadAll = useCallback(async (isSilent = false) => {
+        if (!user) return
+        if (!isSilent) {
+            setLoading(true)
+            setError(null)
+        }
+        try {
+            const [cats, tgs, txns, obs, recurrings] = await Promise.all([
+                FinanceService.getCategories(user.id),
+                FinanceService.getTags(user.id),
+                FinanceService.getTransactions(user.id, { sortOrder: 'desc', includeArchived: false }),
+                FinanceService.getObligations(user.id),
+                FinanceService.getRecurringTemplates(user.id),
+            ])
+            setCategories(cats)
+            setTags(tgs)
+            setTransactions(txns)
+            setObligations(obs)
+            setRecurringTemplates(recurrings)
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Finans verileri yüklenemedi'
+            if (!isSilent) {
+                setError(msg)
+                showToast(msg, 'error')
+            } else {
+                console.error('[Realtime Refetch Error]', msg)
+            }
+        } finally {
+            if (!isSilent) setLoading(false)
+        }
+    }, [user, showToast])
+
     useEffect(() => {
         if (!user) {
             setCategories([])
@@ -171,34 +204,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             setLoading(false)
             return
         }
+        loadAll(false)
+    }, [user, loadAll]) // eslint-disable-line react-hooks/exhaustive-deps
 
-        const loadAll = async () => {
-            setLoading(true)
-            setError(null)
-            try {
-                const [cats, tgs, txns, obs, recurrings] = await Promise.all([
-                    FinanceService.getCategories(user.id),
-                    FinanceService.getTags(user.id),
-                    FinanceService.getTransactions(user.id, { sortOrder: 'desc', includeArchived: false }),
-                    FinanceService.getObligations(user.id),
-                    FinanceService.getRecurringTemplates(user.id),
-                ])
-                setCategories(cats)
-                setTags(tgs)
-                setTransactions(txns)
-                setObligations(obs)
-                setRecurringTemplates(recurrings)
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : 'Finans verileri yüklenemedi'
-                setError(msg)
-                showToast(msg, 'error')
-            } finally {
-                setLoading(false)
-            }
+    // ── Realtime Subscription ──
+    useEffect(() => {
+        if (!user?.id) return
+
+        const supabase = getSupabaseClient()
+        const channelName = `finance-changes-${user.id}`
+
+        const handleChange = () => {
+            // Fetch silently when another tab/device updates the database
+            loadAll(true)
         }
 
-        loadAll()
-    }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+        const channel = supabase.channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_transactions', filter: `user_id=eq.${user.id}` }, handleChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_obligations', filter: `user_id=eq.${user.id}` }, handleChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_recurring_templates', filter: `user_id=eq.${user.id}` }, handleChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_categories', filter: `user_id=eq.${user.id}` }, handleChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_tags', filter: `user_id=eq.${user.id}` }, handleChange)
+            .subscribe(() => { })
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [user?.id, loadAll])
 
     // ── Filtered transactions (derived, never stored) ──
     const filteredTransactions = useMemo(() => {
@@ -576,6 +608,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         note?: string
         frequency: RecurringFrequency
         next_occurrence: string
+        end_date?: string
     }): Promise<RecurringTemplate | null> => {
         if (!user) return null
         try {
@@ -610,6 +643,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             note: string | null
             frequency: RecurringFrequency
             next_occurrence: string
+            end_date: string | null
             is_active: boolean
         }>
     ): Promise<RecurringTemplate | null> => {

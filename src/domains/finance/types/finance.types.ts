@@ -78,6 +78,7 @@ export interface RecurringTemplate {
     note: string | null
     frequency: RecurringFrequency
     next_occurrence: string // ISO date string
+    end_date: string | null // ISO date string
     is_active: boolean
     created_at: string
     updated_at: string | null
@@ -181,6 +182,7 @@ export interface RecurringTemplateFormInput {
     note?: string
     frequency: RecurringFrequency
     next_occurrence: string // date input value
+    end_date?: string // Optional date input value
 }
 
 // ──────────────────────────────────────────────

@@ -648,6 +648,7 @@ export async function createRecurringTemplate(
         note?: string
         frequency: RecurringFrequency
         next_occurrence: string // ISO date
+        end_date?: string | null // ISO date
     }
 ): Promise<RecurringTemplate> {
     if (!Number.isInteger(input.amount) || input.amount <= 0) {
@@ -668,6 +669,7 @@ export async function createRecurringTemplate(
             note: input.note || null,
             frequency: input.frequency,
             next_occurrence: input.next_occurrence,
+            end_date: input.end_date || null,
             is_active: true,
             updated_at: new Date().toISOString(),
         })
@@ -691,6 +693,7 @@ export async function updateRecurringTemplate(
         note: string | null
         frequency: RecurringFrequency
         next_occurrence: string
+        end_date: string | null
         is_active: boolean
     }>
 ): Promise<RecurringTemplate> {
@@ -727,6 +730,12 @@ export async function generateTransactionFromTemplate(
     if (templateErr) throw templateErr
     if (!template) throw new Error('Template not found')
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    // Block generation if the template has an end_date and we are already past it.
+    if (template.end_date && template.end_date < todayStr) {
+        throw new Error('This template has expired (end date passed).')
+    }
+
     // Insert the transaction
     const { data: txn, error: txnErr } = await supabase
         .from('finance_transactions')
@@ -756,10 +765,22 @@ export async function generateTransactionFromTemplate(
         nextDate.setFullYear(nextDate.getFullYear() + 1)
     }
 
+    let updatedIsActive = true;
+    const nextDateStr = nextDate.toISOString().slice(0, 10);
+
+    // If there's an end date and the next occurrence would be beyond it,
+    // we can either mark it inactive immediately, or just let the next Date pass it.
+    // For now we just update next_occurrence. If `nextDateStr > template.end_date`,
+    // it will throw an error on the NEXT manual generation attempt, or we can auto-disable it here.
+    if (template.end_date && nextDateStr > template.end_date) {
+        updatedIsActive = false; // automatically disable the template since it will never generate again
+    }
+
     const { error: updateErr } = await supabase
         .from('finance_recurring_templates')
         .update({
-            next_occurrence: nextDate.toISOString().slice(0, 10),
+            next_occurrence: nextDateStr,
+            is_active: updatedIsActive,
             updated_at: new Date().toISOString(),
         })
         .eq('id', templateId)

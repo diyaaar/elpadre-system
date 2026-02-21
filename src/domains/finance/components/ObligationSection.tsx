@@ -440,6 +440,12 @@ export function ObligationSection() {
                                                         <Undo className="w-3.5 h-3.5" />
                                                         Tekrar Aç
                                                     </button>
+                                                    <button
+                                                        onClick={async () => { await deleteObligation(detail.id); setDetail(null) }}
+                                                        className="px-3 py-2 bg-background-elevated text-text-secondary hover:text-danger rounded-xl border border-white/5 text-xs transition-all"
+                                                    >
+                                                        Borcu Sil
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>

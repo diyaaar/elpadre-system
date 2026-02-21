@@ -96,16 +96,9 @@ export function TagsProvider({ children }: { children: ReactNode }) {
           // Note: Individual components will handle refreshing their own task tags
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // Subscribed successfully
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[Realtime] ✗ Channel error - check Supabase Replication settings')
-        } else if (status === 'TIMED_OUT') {
-          console.error('[Realtime] ✗ Subscription timed out')
-        } else if (status === 'CLOSED') {
-          console.warn('[Realtime] ⚠ Channel closed')
-        }
+      .subscribe(() => {
+        // Silently handle realtime statuses, no need to spam the client console for soft-reloads.
+        // If it times out or errors, fetching works statically anyway.
       })
 
     return () => {
@@ -226,7 +219,7 @@ export function TagsProvider({ children }: { children: ReactNode }) {
         throw error
       }
 
-      const tagIds = data?.map((row) => row.tag_id) || []
+      const tagIds = data?.map((row: { tag_id: string }) => row.tag_id) || []
       if (tagIds.length === 0) return []
 
       const { data: tagsData, error: tagsError } = await supabase
