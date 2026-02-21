@@ -153,7 +153,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={`
-        relative rounded-xl border border-white/10 bg-background-elevated/50 backdrop-blur-xl shadow-glass overflow-hidden
+        relative rounded-xl border border-white/10 bg-background-elevated/50 backdrop-blur-xl shadow-glass
         ${parentTaskId ? 'ml-0 sm:ml-4 mb-4' : 'mb-6'}
       `}
     >
@@ -260,7 +260,7 @@ export function TaskForm({ task, parentTaskId, onCancel, onSave }: TaskFormProps
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between px-3 py-2.5 bg-background-tertiary/30 border-t border-white/5">
+      <div className="flex items-center justify-between px-3 py-2.5 bg-background-tertiary/30 border-t border-white/5 rounded-b-xl">
         <div className="flex items-center gap-2 text-[11px] text-text-tertiary">
           <span className="hidden sm:inline-block opacity-60">Kaydetmek için ⌘+Enter'a basın</span>
         </div>
