@@ -247,8 +247,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (isAllDay) {
         const sDate = startDate || (typeof start === 'string' ? start.slice(0, 10) : null)
-        const eDate = endDate || (typeof end === 'string' ? end.slice(0, 10) : sDate)
+        let eDate = endDate || (typeof end === 'string' ? end.slice(0, 10) : sDate)
         if (!sDate) return res.status(400).json({ error: 'startDate is required for all-day events' })
+
+        // Google Calendar requires all-day event end-dates to be exclusive
+        if (sDate === eDate) {
+          const d = new Date(sDate)
+          d.setDate(d.getDate() + 1)
+          eDate = d.toISOString().slice(0, 10)
+        }
+
         googleStart = { date: sDate }
         googleEnd = { date: eDate || sDate }
       } else {

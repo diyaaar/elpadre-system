@@ -130,22 +130,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`[PATCH] event=${id} calendar=${googleCalendarId}`)
 
       // Build start/end according to allDay flag
-      type DateField = { date: string } | { dateTime: string; timeZone: string }
-      let startField: DateField | undefined
-      let endField: DateField | undefined
+      // We must explicitly set the unused field (date vs dateTime) to null
+      // so Google Calendar doesn't throw a 400 Bad Request if changing event type.
+      let startField: any
+      let endField: any
 
-      if (body.allDay) {
-        const startDate = typeof body.start === 'string' ? body.start.slice(0, 10) : undefined
-        const endDate = typeof body.end === 'string' ? body.end.slice(0, 10) : undefined
-        if (startDate) startField = { date: startDate }
-        if (endDate) endField = { date: endDate }
+      if (body.allDay !== undefined) {
+        if (body.allDay) {
+          const startDate = typeof body.start === 'string' ? body.start.slice(0, 10) : undefined
+          let endDate = typeof body.end === 'string' ? body.end.slice(0, 10) : undefined
+
+          // Google Calendar requires all-day event end-dates to be exclusive
+          if (startDate && startDate === endDate) {
+            const d = new Date(startDate)
+            d.setDate(d.getDate() + 1)
+            endDate = d.toISOString().slice(0, 10)
+          }
+
+          if (startDate) startField = { date: startDate, dateTime: null }
+          if (endDate) endField = { date: endDate, dateTime: null }
+        } else {
+          const tz = body.timeZone || 'Europe/Istanbul'
+          // Strip any trailing Z or +HH:MM offset so Google interprets the time
+          // as a wall-clock time in the given timeZone, not as UTC.
+          const stripOffset = (dt: string) => dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19)
+          if (body.start) startField = { dateTime: stripOffset(body.start), timeZone: tz, date: null }
+          if (body.end) endField = { dateTime: stripOffset(body.end), timeZone: tz, date: null }
+        }
       } else {
-        const tz = body.timeZone || 'Europe/Istanbul'
-        // Strip any trailing Z or +HH:MM offset so Google interprets the time
-        // as a wall-clock time in the given timeZone, not as UTC.
-        const stripOffset = (dt: string) => dt.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19)
-        if (body.start) startField = { dateTime: stripOffset(body.start), timeZone: tz }
-        if (body.end) endField = { dateTime: stripOffset(body.end), timeZone: tz }
+        // Fallback if allDay is not provided (though our frontend sends it)
+        if (body.start) {
+          const isDateOnly = body.start.length === 10
+          startField = isDateOnly
+            ? { date: body.start }
+            : { dateTime: body.start.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19), timeZone: body.timeZone || 'Europe/Istanbul' }
+        }
+        if (body.end) {
+          const isDateOnly = body.end.length === 10
+          endField = isDateOnly
+            ? { date: body.end }
+            : { dateTime: body.end.replace(/(Z|[+-]\d{2}:\d{2})$/, '').slice(0, 19), timeZone: body.timeZone || 'Europe/Istanbul' }
+        }
       }
 
       const patchBody: any = {}
