@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { google } from 'googleapis'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase, getAuthenticatedCalendar, withExponentialBackoff } from './utils'
 
 // ── Local types ──────────────────────────────────────────────
 interface CalendarRecord {
@@ -9,75 +8,6 @@ interface CalendarRecord {
   color: string
   name: string
   is_primary: boolean
-}
-
-// ── Supabase client factory ──────────────────────────────────
-function getSupabase() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return null
-  }
-
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
-
-// ── Google OAuth client with token refresh ───────────────────
-async function getAuthenticatedCalendar(supabase: ReturnType<typeof getSupabase>, userId: string) {
-  if (!supabase) return null
-
-  const { data: tokens, error: tokenError } = await supabase
-    .from('google_calendar_tokens')
-    .select('*')
-    .eq('user_id', userId)
-    .single()
-
-  if (tokenError || !tokens) return null
-
-  let accessToken = tokens.access_token
-  const now = Date.now()
-
-  // Proactively refresh if token expires within 5 minutes
-  if (tokens.expiry_date - now < 5 * 60 * 1000) {
-    try {
-      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          refresh_token: tokens.refresh_token,
-          grant_type: 'refresh_token',
-        }),
-      })
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json()
-        accessToken = refreshData.access_token
-        await supabase
-          .from('google_calendar_tokens')
-          .update({
-            access_token: refreshData.access_token,
-            expiry_date: Date.now() + (refreshData.expires_in * 1000),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', userId)
-      }
-    } catch (err) {
-      console.warn('[events] Token refresh failed, proceeding with existing token:', err)
-    }
-  }
-
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  )
-  oauth2Client.setCredentials({ access_token: accessToken })
-
-  return google.calendar({ version: 'v3', auth: oauth2Client })
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -104,10 +34,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── GET: Fetch events ────────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const { timeMin, timeMax, calendarIds } = req.query
+      const { timeMin, timeMax, calendarIds, syncToken } = req.query
 
-      if (!timeMin || !timeMax) {
-        return res.status(400).json({ error: 'timeMin and timeMax are required' })
+      // Either timeMin & timeMax OR syncToken should be provided
+      if (!syncToken && (!timeMin || !timeMax)) {
+        return res.status(400).json({ error: 'timeMin and timeMax are required when no syncToken is provided' })
       }
 
       const calendar = await getAuthenticatedCalendar(supabase, userId)
@@ -150,25 +81,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: string; summary: string; description?: string
         start: string; end: string; allDay: boolean
         colorId?: string; location?: string; calendarId: string; color?: string
+        status?: string
+        meetLink?: string
+        attendees?: any[]
       }> = []
+
+      let nextSyncToken: string | null = null
 
       for (const cal of calendarsToFetch) {
         try {
-          const response = await calendar.events.list({
+          const listParams: any = {
             calendarId: cal.googleId,
-            timeMin: timeMin as string,
-            timeMax: timeMax as string,
             maxResults: 2500,
             singleEvents: true,
-            orderBy: 'startTime',
-          })
+          }
+
+          if (syncToken) {
+            listParams.syncToken = syncToken as string
+          } else {
+            listParams.timeMin = timeMin as string
+            listParams.timeMax = timeMax as string
+            // orderBy is only compatible with time filters, not syncToken
+            listParams.orderBy = 'startTime'
+          }
+
+          const response = await withExponentialBackoff(() => calendar.events.list(listParams))
+
+          // Save the latest sync token (we assume single calendar logic if multiple we should probably return a map)
+          if (response.data.nextSyncToken) {
+            nextSyncToken = response.data.nextSyncToken
+          }
 
           const items = response.data.items || []
           for (const item of items) {
             if (!item?.id) continue
+
+            // if event was deleted
+            const status = item.status
+            if (status === 'cancelled') {
+              allEvents.push({
+                id: item.id,
+                status: 'cancelled',
+                summary: '', start: '', end: '', allDay: false, calendarId: cal.id,
+              })
+              continue
+            }
+
             const isAllDay = !item.start?.dateTime
             const start = item.start?.dateTime || item.start?.date || ''
             const end = item.end?.dateTime || item.end?.date || ''
+
+            // Extract meet link
+            let meetLink: string | undefined
+            if (item.conferenceData?.entryPoints) {
+              const videoEntryPoint = item.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video')
+              if (videoEntryPoint?.uri) meetLink = videoEntryPoint.uri
+            }
+
             allEvents.push({
               id: item.id,
               summary: item.summary || 'Untitled Event',
@@ -180,15 +149,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               location: item.location || undefined,
               calendarId: cal.id,
               color: cal.color,
+              status: item.status || 'confirmed',
+              meetLink,
+              attendees: item.attendees || undefined,
             })
           }
-        } catch (err) {
+        } catch (err: any) {
+          if (err?.code === 410) {
+            // Sync token expired
+            return res.status(410).json({ error: 'Sync token expired, full sync required.' })
+          }
           console.error(`[events GET] Error fetching calendar ${cal.name}:`, err)
         }
       }
 
-      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-      return res.status(200).json({ events: allEvents })
+      // Sort existing events
+      allEvents.sort((a, b) => {
+        if (!a.start || !b.start) return 0
+        return new Date(a.start).getTime() - new Date(b.start).getTime()
+      })
+
+      return res.status(200).json({ events: allEvents, nextSyncToken })
 
     } catch (err: any) {
       console.error('[events GET] Error:', err?.message)
@@ -210,6 +191,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         location,
         calendarId: requestedCalendarId,
         timeZone,
+        attendees,
+        addMeetLink,
+        eventType,
+        focusTimeProperties,
+        outOfOfficeProperties,
       } = req.body
 
       const eventTitle = (summary || title || '').trim()
@@ -278,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         googleEnd = { dateTime: stripOffset(eDt), timeZone: tz }
       }
 
-      const eventResource = {
+      const eventResource: any = {
         summary: eventTitle,
         description: description || undefined,
         location: location || undefined,
@@ -287,13 +273,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         colorId: colorId ? String(colorId) : undefined,
       }
 
-      const response = await calendar.events.insert({
+      if (attendees && Array.isArray(attendees)) {
+        eventResource.attendees = attendees.map(email => ({ email }))
+      }
+
+      if (addMeetLink) {
+        eventResource.conferenceData = {
+          createRequest: {
+            requestId: `meet-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' }
+          }
+        }
+      }
+
+      if (eventType) {
+        eventResource.eventType = eventType
+        if (eventType === 'focusTime' && focusTimeProperties) {
+          eventResource.focusTimeProperties = focusTimeProperties
+        } else if (eventType === 'outOfOffice' && outOfOfficeProperties) {
+          eventResource.outOfOfficeProperties = outOfOfficeProperties
+        }
+      }
+
+      const insertParams: any = {
         calendarId: googleCalendarId,
         requestBody: eventResource,
-      })
+      }
+
+      if (addMeetLink) {
+        insertParams.conferenceDataVersion = 1
+      }
+
+      if (attendees && attendees.length > 0) {
+        insertParams.sendUpdates = 'all' // notify attendees
+      }
+
+      const response = await withExponentialBackoff(() => calendar.events.insert(insertParams))
 
       const ev = response.data
       const evIsAllDay = !ev.start?.dateTime
+
+      let meetLinkRet: string | undefined
+      if (ev.conferenceData?.entryPoints) {
+        const videoEntryPoint = ev.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video')
+        if (videoEntryPoint?.uri) meetLinkRet = videoEntryPoint.uri
+      }
 
       return res.status(200).json({
         id: ev.id || '',
@@ -305,6 +329,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         colorId: ev.colorId || undefined,
         location: ev.location || undefined,
         calendarId: requestedCalendarId || 'primary',
+        status: ev.status || 'confirmed',
+        meetLink: meetLinkRet,
+        attendees: ev.attendees || undefined,
       })
 
     } catch (err: any) {

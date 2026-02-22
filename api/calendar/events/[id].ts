@@ -1,74 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { google } from 'googleapis'
-import { createClient } from '@supabase/supabase-js'
-
-// ── Supabase client factory ──────────────────────────────────
-function getSupabase() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseServiceKey) return null
-
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-}
-
-// ── Google OAuth client with token refresh ───────────────────
-// This matches the logic in api/calendar/events.ts to ensure consistent auth
-async function getAuthenticatedCalendar(supabase: any, userId: string) {
-  if (!supabase) return null
-
-  const { data: tokens, error: tokenError } = await supabase
-    .from('google_calendar_tokens')
-    .select('*')
-    .eq('user_id', userId)
-    .single()
-
-  if (tokenError || !tokens) return null
-
-  let accessToken = tokens.access_token
-  const now = Date.now()
-
-  // Proactively refresh if token expires within 5 minutes
-  if (tokens.expiry_date - now < 5 * 60 * 1000) {
-    try {
-      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          refresh_token: tokens.refresh_token,
-          grant_type: 'refresh_token',
-        }),
-      })
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json()
-        accessToken = refreshData.access_token
-        await supabase
-          .from('google_calendar_tokens')
-          .update({
-            access_token: refreshData.access_token,
-            expiry_date: Date.now() + (refreshData.expires_in * 1000),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', userId)
-      }
-    } catch (err) {
-      console.warn('[events/[id]] Token refresh failed, proceeding with existing token:', err)
-    }
-  }
-
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  )
-  oauth2Client.setCredentials({ access_token: accessToken })
-
-  return google.calendar({ version: 'v3', auth: oauth2Client })
-}
+import { getSupabase, getAuthenticatedCalendar, withExponentialBackoff } from '../utils'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -180,14 +111,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (body.colorId !== undefined) patchBody.colorId = body.colorId ? String(body.colorId) : null
       if (startField) patchBody.start = startField
       if (endField) patchBody.end = endField
+      if (body.attendees && Array.isArray(body.attendees)) {
+        patchBody.attendees = body.attendees.map((email: string) => ({ email }))
+      }
 
-      const response = await calendar.events.patch({
+      const patchParams: any = {
         calendarId: googleCalendarId,
         eventId: id,
         requestBody: patchBody,
-      })
+      }
 
+      if (body.attendees && body.attendees.length > 0) {
+        patchParams.sendUpdates = 'all'
+      }
+
+      const response: any = await withExponentialBackoff(() => calendar.events.patch(patchParams))
       const ev = response.data
+
+      let meetLinkRet: string | undefined
+      if (ev.conferenceData?.entryPoints) {
+        const videoEntryPoint = ev.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video')
+        if (videoEntryPoint?.uri) meetLinkRet = videoEntryPoint.uri
+      }
+
       return res.status(200).json({
         id: ev.id || '',
         summary: ev.summary || 'Başlıksız Etkinlik',
@@ -198,6 +144,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         location: ev.location || undefined,
         calendarId: requestedCalendarId || 'primary',
         allDay: !!ev.start?.date,
+        status: ev.status || 'confirmed',
+        meetLink: meetLinkRet,
+        attendees: ev.attendees || undefined,
       })
     } catch (err) {
       console.error('Error updating event:', err)
@@ -225,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log(`[DELETE] event=${id} calendar=${googleCalendarId}`)
 
-      await calendar.events.delete({ calendarId: googleCalendarId, eventId: id })
+      await withExponentialBackoff(() => calendar.events.delete({ calendarId: googleCalendarId, eventId: id }))
       return res.status(204).end()
     } catch (err: any) {
       if (err.code === 404 || err.code === 410) {

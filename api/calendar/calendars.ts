@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { google } from 'googleapis'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase, getAuthenticatedCalendar, withExponentialBackoff } from './utils'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -20,24 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Initialize Supabase client
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('[calendars] Missing Supabase config:', {
-      hasUrl: !!supabaseUrl,
-      hasServiceKey: !!supabaseServiceKey,
-      method: req.method,
-    })
-    return res.status(500).json({ error: 'Supabase configuration missing', detail: { hasUrl: !!supabaseUrl, hasServiceKey: !!supabaseServiceKey } })
+  const supabase = getSupabase()
+  if (!supabase) {
+    console.error('[calendars] Missing Supabase config')
+    return res.status(500).json({ error: 'Supabase configuration missing' })
   }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
 
   if (req.method === 'GET') {
     try {
@@ -68,60 +54,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Sync calendars from Google Calendar
       console.log('[calendars POST] Starting sync for user:', userId)
-      const { data: tokens, error: tokenError } = await supabase
-        .from('google_calendar_tokens')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (tokenError || !tokens) {
-        console.error('[calendars POST] Token fetch error:', tokenError)
+      // Initialize Google Calendar API
+      const calendar = await getAuthenticatedCalendar(supabase, userId)
+      if (!calendar) {
         return res.status(401).json({ error: 'Google Calendar not connected' })
       }
 
-      // Refresh token if needed
-      const now = Date.now()
-      let accessToken = tokens.access_token
-
-      if (tokens.expiry_date - now < 5 * 60 * 1000) {
-        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: tokens.refresh_token,
-            grant_type: 'refresh_token',
-          }),
-        })
-
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json()
-          accessToken = refreshData.access_token
-
-          await supabase
-            .from('google_calendar_tokens')
-            .update({
-              access_token: refreshData.access_token,
-              expiry_date: Date.now() + (refreshData.expires_in * 1000),
-            })
-            .eq('user_id', userId)
-        }
-      }
-
-      // Initialize Google Calendar API
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET
-      )
-      oauth2Client.setCredentials({ access_token: accessToken })
-
-      const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
-
       // Fetch calendar list from Google
-      const response = await calendar.calendarList.list({
+      const response: any = await withExponentialBackoff(() => calendar.calendarList.list({
         minAccessRole: 'reader',
-      })
+      }))
 
       const googleCalendars = response.data.items || []
 

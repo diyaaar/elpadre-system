@@ -17,6 +17,9 @@ export interface CalendarEvent {
   colorId?: string
   location?: string
   calendarId?: string // ID of the calendar this event belongs to
+  status?: string
+  meetLink?: string
+  attendees?: any[]
 }
 
 interface CalendarContextType {
@@ -67,6 +70,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const hasLoadedOnceRef = useRef(false)
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const currentDateRef = useRef<Date>(new Date())
+  const syncTokenRef = useRef<string | null>(null)
 
   // Check if user is authenticated with Google Calendar
   const checkAuthStatus = useCallback(async () => {
@@ -305,6 +309,10 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       const data = await response.json()
       const fetchedEvents = data.events || []
 
+      if (data.nextSyncToken) {
+        syncTokenRef.current = data.nextSyncToken
+      }
+
       // Cache the events
       eventsCacheRef.current.set(cacheKey, {
         events: fetchedEvents,
@@ -342,64 +350,103 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
       if (!session) return
 
-      const response = await fetch(
-        `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      )
+      let url = `/api/calendar/events?timeMin=${startOfMonth.toISOString()}&timeMax=${endOfMonth.toISOString()}&user_id=${user.id}`
+      if (syncTokenRef.current) {
+        url = `/api/calendar/events?syncToken=${syncTokenRef.current}&user_id=${user.id}`
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (response.status === 410) {
+        // Sync token expired
+        syncTokenRef.current = null
+        fetchEvents(date, false)
+        return
+      }
 
       if (response.ok) {
         const data = await response.json()
         const fetchedEvents = data.events || []
 
-        // Compare with current events to detect changes
-        const currentEvents = events
-        const eventsChanged =
-          currentEvents.length !== fetchedEvents.length ||
-          currentEvents.some((currentEvent: CalendarEvent) => {
-            const fetchedEvent = fetchedEvents.find((e: CalendarEvent) => e.id === currentEvent.id)
-            if (!fetchedEvent) return true // Event was deleted
-            // Check if event was updated (compare key fields)
-            return (
-              currentEvent.summary !== fetchedEvent.summary ||
-              currentEvent.start !== fetchedEvent.start ||
-              currentEvent.end !== fetchedEvent.end ||
-              currentEvent.description !== fetchedEvent.description ||
-              currentEvent.location !== fetchedEvent.location ||
-              currentEvent.color !== fetchedEvent.color
-            )
-          }) ||
-          fetchedEvents.some((fetchedEvent: CalendarEvent) => {
-            // Check for new events
-            return !currentEvents.find((e: CalendarEvent) => e.id === fetchedEvent.id)
-          })
+        if (data.nextSyncToken) {
+          syncTokenRef.current = data.nextSyncToken
+        }
 
-        // Only update if there are actual changes
-        if (eventsChanged) {
-          // Update cache
-          eventsCacheRef.current.set(cacheKey, {
-            events: fetchedEvents,
-            timestamp: Date.now()
-          })
+        if (syncTokenRef.current || data.nextSyncToken) {
+          // Delta update
+          if (fetchedEvents.length > 0) {
+            setEvents(prev => {
+              let newEvents = [...prev]
+              for (const ev of fetchedEvents) {
+                if (ev.status === 'cancelled') {
+                  newEvents = newEvents.filter(e => e.id !== ev.id)
+                } else {
+                  const idx = newEvents.findIndex(e => e.id === ev.id)
+                  if (idx >= 0) newEvents[idx] = ev
+                  else newEvents.push(ev)
+                }
+              }
 
-          // Silently update events without showing loading
-          setEvents(fetchedEvents)
+              eventsCacheRef.current.set(cacheKey, {
+                events: newEvents,
+                timestamp: Date.now()
+              })
+
+              return newEvents
+            })
+          } else {
+            // Keep cache fresh
+            eventsCacheRef.current.set(cacheKey, {
+              events,
+              timestamp: Date.now()
+            })
+          }
         } else {
-          // Update cache timestamp even if no changes (to keep cache fresh)
-          eventsCacheRef.current.set(cacheKey, {
-            events: fetchedEvents,
-            timestamp: Date.now()
-          })
+          // Fallback to full compare if syncToken was somehow not used/provided
+          const currentEvents = events
+          const eventsChanged =
+            currentEvents.length !== fetchedEvents.length ||
+            currentEvents.some((currentEvent: CalendarEvent) => {
+              const fetchedEvent = fetchedEvents.find((e: CalendarEvent) => e.id === currentEvent.id)
+              if (!fetchedEvent) return true // Event was deleted
+              // Check if event was updated (compare key fields)
+              return (
+                currentEvent.summary !== fetchedEvent.summary ||
+                currentEvent.start !== fetchedEvent.start ||
+                currentEvent.end !== fetchedEvent.end ||
+                currentEvent.description !== fetchedEvent.description ||
+                currentEvent.location !== fetchedEvent.location ||
+                currentEvent.color !== fetchedEvent.color
+              )
+            }) ||
+            fetchedEvents.some((fetchedEvent: CalendarEvent) => {
+              // Check for new events
+              return !currentEvents.find((e: CalendarEvent) => e.id === fetchedEvent.id)
+            })
+
+          if (eventsChanged) {
+            eventsCacheRef.current.set(cacheKey, {
+              events: fetchedEvents,
+              timestamp: Date.now()
+            })
+            setEvents(fetchedEvents)
+          } else {
+            eventsCacheRef.current.set(cacheKey, {
+              events: fetchedEvents,
+              timestamp: Date.now()
+            })
+          }
         }
       }
     } catch (err) {
       // Silently fail in background sync
       console.warn('Background sync failed:', err)
     }
-  }, [isAuthenticated, user, events])
+  }, [isAuthenticated, user, events, fetchEvents])
 
   // Start periodic auto-sync
   useEffect(() => {
