@@ -7,9 +7,12 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background flex flex-col"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+    >
       <Header />
-      <main className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-8 max-w-full overflow-x-hidden" role="main">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-8 max-w-full overflow-x-hidden" role="main">
         {children}
       </main>
     </div>

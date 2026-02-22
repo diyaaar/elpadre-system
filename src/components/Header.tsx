@@ -72,7 +72,10 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-xl bg-background/60 border-b border-white/5">
+      <header
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-xl bg-background/60 border-b border-white/5"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo Section */}
@@ -181,7 +184,7 @@ export function Header() {
       </header>
 
       {/* Spacer for fixed header */}
-      <div className="h-16 sm:h-20" />
+      <div className="h-16 sm:h-20 box-content" style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }} />
 
       {/* Avatar Upload Modal */}
       {showAvatarModal && (

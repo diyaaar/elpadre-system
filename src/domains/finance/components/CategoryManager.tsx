@@ -87,21 +87,22 @@ export function CategoryManager() {
                         const catTags = tags.filter((t) => t.category_id === cat.id)
                         return (
                             <motion.div key={cat.id} layout className="p-4 bg-background-elevated rounded-xl border border-white/5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                                        <span className="text-sm font-medium text-white">{cat.name}</span>
-                                        <span className="text-xs text-text-tertiary">({catTags.length} etiket)</span>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <div className="w-3 h-3 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
+                                        <span className="text-sm font-medium text-white truncate">{cat.name}</span>
+                                        <span className="text-xs text-text-tertiary shrink-0 whitespace-nowrap">({catTags.length} etiket)</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                                         <button onClick={() => { setShowTagForm(cat.id); setTagName(''); setTagColor(PRESET_COLORS[2]) }}
-                                            className="flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10">
-                                            <Tag className="w-3 h-3" />
-                                            Etiket Ekle
+                                            className="flex items-center gap-1 text-xs text-text-tertiary hover:text-primary transition-colors px-1.5 sm:px-2 py-1 rounded-lg hover:bg-primary/10 whitespace-nowrap">
+                                            <Tag className="w-3 h-3 shrink-0" />
+                                            <span className="hidden sm:inline">Etiket Ekle</span>
+                                            <span className="sm:hidden">Ekle</span>
                                         </button>
                                         <button onClick={() => deleteCategory(cat.id)}
-                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all">
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                            className="p-1.5 rounded-lg text-text-tertiary hover:text-danger hover:bg-danger/10 transition-all shrink-0">
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
