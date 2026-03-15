@@ -1001,6 +1001,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     // Apply sorting
     filtered.sort((a, b) => {
+      // Completed tasks always sink below active tasks within any sort mode
+      const completedDiff = (a.completed ? 1 : 0) - (b.completed ? 1 : 0)
+      if (completedDiff !== 0) return completedDiff
+
       switch (sort) {
         case 'deadline':
           if (!a.deadline && !b.deadline) return 0

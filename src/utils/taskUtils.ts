@@ -73,7 +73,13 @@ export function buildTaskTree(tasks: TaskWithSubtasks[]): TaskWithSubtasks[] {
 
   // Sort tasks by position
   const sortByPosition = (tasks: TaskWithSubtasks[]) => {
-    tasks.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    tasks.sort((a, b) => {
+      // Completed subtasks always sink below active subtasks
+      const completedDiff = (a.completed ? 1 : 0) - (b.completed ? 1 : 0)
+      if (completedDiff !== 0) return completedDiff
+      // Within each group, preserve existing position order
+      return (a.position ?? 0) - (b.position ?? 0)
+    })
     tasks.forEach((task) => {
       if (task.subtasks) {
         sortByPosition(task.subtasks)
