@@ -1,0 +1,216 @@
+import { Portal } from '../components/Portal'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Smile } from 'lucide-react'
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
+import { useWorkspaces } from '../contexts/WorkspacesContext'
+import { useToast } from '../contexts/ToastContext'
+import { WORKSPACE_COLORS, Workspace } from '../types/workspace'
+
+interface CreateWorkspaceModalProps {
+  isOpen: boolean
+  onClose: () => void
+  editingWorkspace?: Workspace | null
+}
+
+export function CreateWorkspaceModal({
+  isOpen,
+  onClose,
+  editingWorkspace,
+}: CreateWorkspaceModalProps) {
+  const { createWorkspace, updateWorkspace } = useWorkspaces()
+  const { showToast } = useToast()
+  const [name, setName] = useState(editingWorkspace?.name || '')
+  const [selectedIcon, setSelectedIcon] = useState<string>(editingWorkspace?.icon || '📋')
+  const [selectedColor, setSelectedColor] = useState<string>(editingWorkspace?.color || WORKSPACE_COLORS[0].value)
+  const [saving, setSaving] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editingWorkspace) {
+        setName(editingWorkspace.name)
+        setSelectedIcon(editingWorkspace.icon)
+        setSelectedColor(editingWorkspace.color)
+      } else {
+        setName('')
+        setSelectedIcon('📋')
+        setSelectedColor(WORKSPACE_COLORS[0].value)
+      }
+    }
+  }, [isOpen, editingWorkspace])
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      showToast('Lütfen bir çalışma alanı adı girin', 'error', 2000)
+      return
+    }
+
+    setSaving(true)
+    try {
+      if (editingWorkspace) {
+        await updateWorkspace(editingWorkspace.id, {
+          name: name.trim(),
+          icon: selectedIcon,
+          color: selectedColor,
+        })
+        showToast('Çalışma alanı güncellendi', 'success', 2000)
+      } else {
+        await createWorkspace({
+          name: name.trim(),
+          icon: selectedIcon,
+          color: selectedColor,
+        })
+        showToast('Çalışma alanı oluşturuldu', 'success', 2000)
+      }
+      onClose()
+    } catch (err) {
+      console.error('Error saving workspace:', err)
+      showToast('Çalışma alanı kaydedilemedi', 'error', 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          className="bg-background-secondary border border-background-tertiary rounded-2xl shadow-xl max-w-md w-full z-10 max-h-[calc(100vh-2rem)] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-background-tertiary flex-shrink-0">
+            <h2 className="text-xl font-semibold text-text-primary">
+              {editingWorkspace ? 'Çalışma Alanını Düzenle' : 'Yeni Çalışma Alanı Oluştur'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-background-tertiary rounded transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5 text-text-tertiary" />
+            </button>
+          </div>
+
+          <div className="px-5 py-4 space-y-4 overflow-y-auto">
+            {/* Name Input */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                İsim <span className="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="örn. İş, Kişisel, Okul"
+                className="w-full px-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                autoFocus
+              />
+            </div>
+
+            {/* Icon Picker */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Simge
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="flex items-center gap-2 px-4 py-2 bg-background-tertiary border border-background-tertiary rounded-lg hover:border-primary/50 transition-all hover:scale-105 active:scale-95"
+                >
+                  <span className="text-2xl">{selectedIcon}</span>
+                  <Smile className="w-4 h-4 text-text-tertiary" />
+                </button>
+                <AnimatePresence>
+                  {showEmojiPicker && (
+                    <Portal>
+                      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div
+                          className="absolute inset-0"
+                          onClick={() => setShowEmojiPicker(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                          transition={{ duration: 0.15 }}
+                          className="relative z-[101]"
+                        >
+                          <div className="bg-background-secondary border border-background-tertiary rounded-xl shadow-2xl overflow-hidden">
+                            <EmojiPicker
+                              onEmojiClick={(emojiData: EmojiClickData) => {
+                                setSelectedIcon(emojiData.emoji)
+                                setShowEmojiPicker(false)
+                              }}
+                              width={320}
+                              height={380}
+                              searchDisabled={false}
+                              skinTonesDisabled={true}
+                            />
+                          </div>
+                        </motion.div>
+                      </div>
+                    </Portal>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Color Picker */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Renk
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {WORKSPACE_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => setSelectedColor(color.value)}
+                    className={`
+                      w-10 h-10 rounded-full border-2 transition-all
+                      ${selectedColor === color.value
+                        ? 'border-text-primary scale-110'
+                        : 'border-background-tertiary hover:border-primary/50'
+                      }
+                    `}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-background-tertiary flex-shrink-0">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
+            >
+              İptal
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!name.trim() || saving}
+              className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Kaydediliyor...' : editingWorkspace ? 'Güncelle' : 'Oluştur'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  )
+}

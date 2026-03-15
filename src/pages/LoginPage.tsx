@@ -1,0 +1,36 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AuthForm } from '../components/AuthForm'
+import { useAuth } from '../contexts/AuthContext'
+
+export function LoginPage() {
+  const { signIn, user } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
+
+  const handleSignIn = async (email: string, password: string, rememberMe?: boolean) => {
+    // Save preference
+    if (rememberMe !== undefined) {
+      localStorage.setItem('remember_me', rememberMe ? 'true' : 'false')
+    }
+    
+    // Always set active session when explicitly logging in
+    sessionStorage.setItem('active_session', 'true')
+
+    return await signIn(email, password)
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <AuthForm mode="login" onSubmit={handleSignIn} />
+      </div>
+    </div>
+  )
+}
+
