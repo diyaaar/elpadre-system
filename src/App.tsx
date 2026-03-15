@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { WorkspacesProvider } from './contexts/WorkspacesContext'
@@ -16,6 +17,31 @@ import { ConfigError } from './components/ConfigError'
 import { initializationError } from './lib/supabase'
 
 function App() {
+  // WebView: clear OAuth back-stack after successful Google Calendar connection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('clearHistory') === '1') {
+      const rnWebView = (window as any).ReactNativeWebView
+      if (rnWebView) {
+        rnWebView.postMessage(JSON.stringify({ type: 'CLEAR_HISTORY' }))
+      }
+      ;(window as any).AndroidBridge?.clearHistory()
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
+  // WebView: notify shell on every back navigation so it can intercept the back button
+  useEffect(() => {
+    const handlePopState = () => {
+      const rnWebView = (window as any).ReactNativeWebView
+      if (rnWebView) {
+        rnWebView.postMessage(JSON.stringify({ type: 'NAVIGATED_BACK' }))
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   // Show config error if initialization failed
   if (initializationError) {
     return <ConfigError />

@@ -137,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.redirect(`${FRONTEND_URL}?calendar_error=storage_failed`)
     }
 
-    return res.redirect(`${FRONTEND_URL}?calendar_connected=true`)
+    return res.redirect(`${FRONTEND_URL}?calendar_connected=true&clearHistory=1`)
   } catch (err) {
     console.error('OAuth callback error:', err)
     return res.redirect(`${FRONTEND_URL}?calendar_error=connection_failed`)
