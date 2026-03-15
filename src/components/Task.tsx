@@ -331,9 +331,11 @@ export function Task({ task, depth = 0 }: TaskProps) {
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}
       className="group mb-3"
       style={{ marginLeft: `${Math.min(depth * 24, 72)}px` }}
     >
@@ -639,9 +641,11 @@ export function Task({ task, depth = 0 }: TaskProps) {
             exit={{ opacity: 0, height: 0 }}
             className="pl-4 mt-2 border-l-2 border-white/5 ml-4"
           >
-            {task.subtasks!.map(subtask => (
-              <Task key={subtask.id} task={subtask} depth={depth + 1} />
-            ))}
+            <AnimatePresence initial={false}>
+              {task.subtasks!.map(subtask => (
+                <Task key={subtask.id} task={subtask} depth={depth + 1} />
+              ))}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
