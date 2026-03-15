@@ -117,20 +117,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     })
 
-    // Store tokens in Supabase
+    // Store tokens in Supabase.
+    // Google only returns a refresh_token on the first authorization — never overwrite
+    // an existing refresh_token with undefined, or the next hourly refresh will fail.
+    const upsertData: Record<string, unknown> = {
+      user_id: userId,
+      access_token: tokens.access_token,
+      expiry_date: expiryDate,
+      token_type: tokens.token_type || 'Bearer',
+      scope: tokens.scope,
+      updated_at: new Date().toISOString(),
+    }
+    if (tokens.refresh_token) {
+      upsertData.refresh_token = tokens.refresh_token
+    }
+
     const { error: dbError } = await supabase
       .from('google_calendar_tokens')
-      .upsert({
-        user_id: userId,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expiry_date: expiryDate,
-        token_type: tokens.token_type || 'Bearer',
-        scope: tokens.scope,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id'
-      })
+      .upsert(upsertData, { onConflict: 'user_id' })
 
     if (dbError) {
       console.error('Error storing tokens:', dbError)
