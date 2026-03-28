@@ -99,6 +99,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('user_id', user.id)
         .eq('workspace_id', currentWorkspaceId) // CRITICAL: Always filter by workspace_id
+        .is('deleted_at', null) // Soft delete: exclude deleted tasks
 
 
       const { data, error: fetchError } = await query
@@ -287,6 +288,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           .select('position')
           .eq('user_id', user.id)
           .eq('workspace_id', currentWorkspaceId) // CRITICAL: Filter by workspace
+          .is('deleted_at', null) // Soft delete: exclude deleted tasks
 
         if (parentTaskId === null || parentTaskId === undefined) {
           positionQuery = positionQuery.is('parent_task_id', null)
@@ -654,12 +656,13 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
     try {
       const supabase = getSupabase()
+      const deletedAt = new Date().toISOString()
 
-      // Delete all subtasks first (to maintain referential integrity)
+      // Soft delete all subtasks first
       if (allSubtasks.length > 0) {
         const { error: subtasksDeleteError } = await supabase
           .from('tasks')
-          .delete()
+          .update({ deleted_at: deletedAt })
           .in('id', allSubtasks.map((t) => t.id))
 
         if (subtasksDeleteError) {
@@ -674,10 +677,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Delete the parent task
+      // Soft delete the parent task
       const { error: deleteError } = await supabase
         .from('tasks')
-        .delete()
+        .update({ deleted_at: deletedAt })
         .eq('id', id)
 
       if (deleteError) {
@@ -872,6 +875,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
           .select('position')
           .eq('user_id', user.id)
           .eq('parent_task_id', taskId)
+          .is('deleted_at', null) // Soft delete: exclude deleted tasks
           .order('position', { ascending: false })
           .limit(1)
 
